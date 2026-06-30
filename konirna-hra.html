@@ -145,7 +145,7 @@
     <p style="font-weight:800;color:#7a4a1a;margin-top:8px">Zvol si postavu, kterou chceš v konírně hrát, nebo hrej jako návštěvník — klikni na postavu a hra začne:</p>
     <div class="chars" id="charList"></div>
     <p class="disc">Už jsi objevil minihru pinpong, minihry na jízdárně v rámci tréninku nebo závodu, síň slávy konírny a že jen Martin může vozit věci s nakladačem?</p>
-    <p style="font-size:11px;color:#9a7a4a;margin-top:12px;text-align:center;letter-spacing:.3px">©MondAI · v1.062</p>
+    <p style="font-size:11px;color:#9a7a4a;margin-top:12px;text-align:center;letter-spacing:.3px">©MondAI · v1.064</p>
   </div>
 </div>
 <div id="pong" class="overlay">
@@ -175,6 +175,12 @@
   <div id="mgMsg" style="color:#ffe9b0;font-weight:800;margin-top:8px;height:20px"></div>
   <div style="display:flex;gap:10px;margin-top:12px"><button class="bigbtn" id="mgClose">Zpět do konírny</button></div>
 </div>
+<div id="zmb" class="overlay" style="display:none">
+  <div style="color:#fff;font-weight:900;font-size:18px;margin-bottom:6px">🧟 Koňská zombie apokalypsa</div>
+  <div style="position:relative"><canvas id="zmbCanvas" width="760" height="460" style="background:#1a1426;border-radius:10px;touch-action:none;max-width:94vw;max-height:66vh;cursor:crosshair"></canvas><div id="zmbChoose" class="diffpick"><div class="dt">Zvol obtížnost snu:</div><div class="drow"><button class="dbtn" data-d="Z">Z<small>14 koní</small></button><button class="dbtn" data-d="L">L<small>14+28</small></button><button class="dbtn" data-d="S">S<small>14+28+56</small></button></div></div></div>
+  <div id="zmbMsg" style="color:#ffe9b0;font-weight:800;margin-top:8px;height:20px"></div>
+  <div style="display:flex;gap:10px;margin-top:12px"><button class="bigbtn" id="zmbClose">Probudit se</button></div>
+</div>
 <div id="trResult" class="overlay" style="display:none"><div class="card" style="max-width:560px;text-align:center"><h2 id="trResTitle">🏆 Gratulujeme!</h2><p id="trResWho" style="font-weight:800;color:#7a4a1a;margin:2px 0 8px"></p><div id="trResBody" style="overflow-x:auto;margin:8px 0"></div><button class="bigbtn" id="trResClose">Zpět do konírny</button></div></div>
 <div id="trStrip" style="position:fixed;top:4px;left:50%;transform:translateX(-50%);display:none;gap:3px;max-width:97vw;overflow-x:auto;z-index:20;padding:3px 6px;background:rgba(255,255,255,.14);border-radius:10px;align-items:flex-end;pointer-events:none"></div>
 <div id="trDlg" class="overlay" style="display:none">
@@ -190,6 +196,7 @@
     <h2>🏁 Pořadí překážek</h2>
     <p style="font-size:12px;color:#7a4a1a">Přetáhni ikonu jedné překážky na jinou — prohodí se. Start a Cíl jsou pevné.</p>
     <div id="trTable" style="overflow-x:auto;padding:6px 0"></div>
+    <div id="trDiff" style="margin-top:8px"><span style="font-weight:800;color:#7a4a1a;margin-right:6px">Obtížnost:</span><button class="dbtn trd" data-d="Z">Z<small>lehká</small></button><button class="dbtn trd" data-d="L">L<small>střední</small></button><button class="dbtn trd" data-d="S">S<small>těžká</small></button></div>
     <div style="margin-top:12px;display:flex;gap:10px;justify-content:center"><button class="bigbtn" id="trStart">Spustit závod</button><button class="bigbtn" id="trCancel">Zpět</button></div>
   </div>
 </div>
@@ -713,16 +720,70 @@ function drawChicken(x,y,f){ctx.fillStyle='rgba(0,0,0,.15)';ctx.fillRect(x-6,y+5
 function updateDogs(dt){var YR=AREAS[7];dogs.forEach(function(d){d.t-=dt;if(d.t<=0){if(Math.random()<0.55){d.tx=KOTEC.x+25+Math.random()*(KOTEC.w-50);d.ty=KOTEC.y+25+Math.random()*(KOTEC.h-45);d.goRest=true;d.t=4000+Math.random()*4000;}else{d.tx=YR.x+20+Math.random()*(YR.w-40);d.ty=YR.y+20+Math.random()*(YR.h-40);d.goRest=false;d.rest=false;d.t=2500+Math.random()*3000;}}var dx=d.tx-d.x,dy=d.ty-d.y,dd=Math.hypot(dx,dy);if(dd>3){if(dx<-0.2)d.f=true;else if(dx>0.2)d.f=false;d.x+=dx/dd*0.85;d.y+=dy/dd*0.85;d.rest=false;}else if(d.goRest){d.rest=true;}});}
 
 function separateEntities(){var ents=[],i;horses.forEach(function(h){h._mt=false;});if(player.mountHorse)player.mountHorse._mt=true;for(i=0;i<npcs.length;i++)if(npcs[i].mountHorse)npcs[i].mountHorse._mt=true;if(!player.mounted&&!player.sleeping&&!player.gone)ents.push(player);for(i=0;i<npcs.length;i++){var n=npcs[i];if(blockEnt(n)&&!n.mounted&&!n.holding)ents.push(n);}for(i=0;i<horses.length;i++){var h=horses[i];if(blockEnt(h)&&!h._mt)ents.push(h);}for(var a=0;a<ents.length;a++)for(var b=a+1;b<ents.length;b++){var e1=ents[a],e2=ents[b];var rr=entRadius(e1)+entRadius(e2);var dx=e2.x-e1.x,dy=e2.y-e1.y,d2=dx*dx+dy*dy;if(d2<rr*rr&&d2>0.02){var d=Math.sqrt(d2),ov=rr-d,ux=dx/d,uy=dy/d,w1=(e1===player)?0:((e2===player)?1:0.5),w2=(e2===player)?0:((e1===player)?1:0.5);var n1x=e1.x-ux*ov*w1,n1y=e1.y-uy*ov*w1,n2x=e2.x+ux*ov*w2,n2y=e2.y+uy*ov*w2;if(w1>0&&!blocked(n1x,n1y,e1.mounted,e1!==player)){e1.x=n1x;e1.y=n1y;}if(w2>0&&!blocked(n2x,n2y,e2.mounted,e2!==player)){e2.x=n2x;e2.y=n2y;}}}}
+/* ===== Minihra: Koňská zombie apokalypsa ===== */
+var zcv=document.getElementById('zmbCanvas'),zcx=zcv.getContext('2d');
+var zmbActive=false,zmb=null,zmbRAF=0,zmbLast=0;
+function openZmb(){try{closeCtx();}catch(e){}zmbActive=true;introOpen=false;document.getElementById('zmb').style.display='flex';document.getElementById('zmbMsg').textContent='';zmbChoose(true);}
+function zmbChoose(initial){cancelAnimationFrame(zmbRAF);zmb=null;document.getElementById('zmbChoose').style.display='flex';if(initial)document.getElementById('zmbMsg').textContent='';zmbDraw0();}
+function closeZmb(){zmbActive=false;document.getElementById('zmb').style.display='none';cancelAnimationFrame(zmbRAF);if(player)player.dreamDone=true;}
+function zmbDraw0(){var c=zcx,W=zcv.width,H=zcv.height;c.fillStyle='#1a1426';c.fillRect(0,0,W,H);c.fillStyle='#cfc9e6';c.beginPath();c.arc(W-50,46,20,0,6.3);c.fill();}
+function zmbStart(diff){document.getElementById('zmbChoose').style.display='none';var W=zcv.width,H=zcv.height,cx=W/2,cy=H/2,mg=18;
+ zmb={diff:diff,maxGen:{Z:1,L:2,S:3}[diff],cx:cx,cy:cy,ang:-Math.PI/2,life:100,killed:0,zombies:[],arrows:[],t0:0,endT:0,started:false,cd:3200,done:false,result:''};
+ for(var i=0;i<14;i++){var a=(i/14)*6.283+0.25,dx=Math.cos(a),dy=Math.sin(a);
+  var tX=Math.abs(dx)<1e-4?1e9:(((dx>0?(W-mg):mg)-cx)/dx),tY=Math.abs(dy)<1e-4?1e9:(((dy>0?(H-mg):mg)-cy)/dy),tt=Math.min(tX,tY);
+  var ex=cx+dx*tt,ey=cy+dy*tt,hd=horses[i%horses.length],time=10+Math.random()*10,dd=Math.hypot(cx-ex,cy-ey);
+  zmb.zombies.push({body:hd.body,mane:hd.mane,shadeC:hd.shadeC,size:Math.max(0.72,(hd.size||1)*0.78),phase:Math.random()*6.28,name:hd.name,x:ex,y:ey,gen:1,speed:Math.max(0.004,(dd-34)/(time*1000)),reach:34,biteT:0,ang:Math.atan2(cy-ey,cx-ex)});}
+}
+function zmbDown(){if(!zmb||zmb.done||zmb.cd>0)return;zmb.arrows.push({x:zmb.cx,y:zmb.cy,vx:Math.cos(zmb.ang)*0.6,vy:Math.sin(zmb.ang)*0.6,life:1500});}
+function zmbMove(mx,my){if(zmb&&!zmb.done)zmb.ang=Math.atan2(my-zmb.cy,mx-zmb.cx);}
+function zmbHit(idx){var z=zmb.zombies[idx];zmb.killed++;zmb.zombies.splice(idx,1);
+ if(z.gen<zmb.maxGen){for(var cc=0;cc<2;cc++){var nx=z.x+(Math.random()-0.5)*40,ny=z.y+(Math.random()-0.5)*40,dd=Math.hypot(zmb.cx-nx,zmb.cy-ny),tm=8+Math.random()*7;
+  zmb.zombies.push({body:z.body,mane:z.mane,shadeC:z.shadeC,size:z.size,phase:Math.random()*6.28,name:z.name,x:nx,y:ny,gen:z.gen+1,speed:Math.max(0.004,(dd-34)/(tm*1000)),reach:34,biteT:0,ang:Math.atan2(zmb.cy-ny,zmb.cx-nx)});}}}
+function zmbEnd(win,now){zmb.done=true;zmb.endT=now;zmb.result=win?'win':'lose';}
+function zmbLoop(now){if(!zmbActive||!zmb)return;var dt=Math.min(50,now-zmbLast);zmbLast=now;
+ if(zmb.cd>0){zmb.cd-=dt;if(zmb.cd<=0){zmb.cd=0;zmb.started=true;zmb.t0=now;}zmbDraw(now);zmbRAF=requestAnimationFrame(zmbLoop);return;}
+ if(!zmb.done){var rot=0.052*dt/16;if(keys['a']||keys['arrowleft'])zmb.ang-=rot;if(keys['d']||keys['arrowright'])zmb.ang+=rot;
+  for(var i=0;i<zmb.zombies.length;i++){var z=zmb.zombies[i],dx=zmb.cx-z.x,dy=zmb.cy-z.y,d=Math.hypot(dx,dy)||1;z.ang=Math.atan2(dy,dx);if(d>z.reach){z.x+=dx/d*z.speed*dt;z.y+=dy/d*z.speed*dt;z.biting=false;}else{z.biting=true;z.biteT+=dt;if(z.biteT>=1000){z.biteT-=1000;zmb.life--;}}}
+  for(var ai=zmb.arrows.length-1;ai>=0;ai--){var ar=zmb.arrows[ai];ar.x+=ar.vx*dt;ar.y+=ar.vy*dt;ar.life-=dt;var hit=false;
+   for(var zi=0;zi<zmb.zombies.length;zi++){var z2=zmb.zombies[zi];if(Math.hypot(ar.x-z2.x,ar.y-z2.y)<16*z2.size+6){zmbHit(zi);hit=true;break;}}
+   if(hit||ar.life<=0||ar.x<-12||ar.x>zcv.width+12||ar.y<-12||ar.y>zcv.height+12)zmb.arrows.splice(ai,1);}
+  if(zmb.life<=0){zmb.life=0;zmbEnd(false,now);}else if(zmb.zombies.length===0){zmbEnd(true,now);}}
+ zmbDraw(now);if(zmbActive&&zmb)zmbRAF=requestAnimationFrame(zmbLoop);}
+function zmbDraw(now){var c=zcx,W=zcv.width,H=zcv.height;
+ c.fillStyle='#1a1426';c.fillRect(0,0,W,H);c.fillStyle='#241c33';c.beginPath();c.ellipse(zmb.cx,zmb.cy,W*0.52,H*0.52,0,0,6.3);c.fill();
+ c.fillStyle='#cfc9e6';c.beginPath();c.arc(W-50,46,20,0,6.3);c.fill();
+ var _o=ctx,i;
+ for(i=0;i<zmb.zombies.length;i++){var z=zmb.zombies[i];
+  var hh={x:0,y:0,size:z.size,body:z.body,mane:z.mane,shadeC:z.shadeC,phase:z.phase,bob:0.5,moving:true,ang:(z.ang||0)+Math.PI/2,name:''};
+  c.save();c.translate(z.x,z.y);ctx=c;try{drawHorse(hh,now);}catch(e){}ctx=_o;c.restore();
+  var dx=zmb.cx-z.x,dy=zmb.cy-z.y,d=Math.hypot(dx,dy)||1,hx=z.x+dx/d*22*z.size,hy=z.y+dy/d*22*z.size,px=-dy/d,py=dx/d;
+  c.save();c.fillStyle='#ff2a2a';c.shadowColor='#ff0000';c.shadowBlur=9;c.beginPath();c.arc(hx+px*4*z.size,hy+py*4*z.size,2.6*z.size,0,6.3);c.arc(hx-px*4*z.size,hy-py*4*z.size,2.6*z.size,0,6.3);c.fill();c.restore();}
+ c.strokeStyle='#ffe08a';c.lineWidth=3;c.fillStyle='#fff';
+ for(i=0;i<zmb.arrows.length;i++){var ar=zmb.arrows[i],an=Math.atan2(ar.vy,ar.vx);c.beginPath();c.moveTo(ar.x,ar.y);c.lineTo(ar.x-Math.cos(an)*13,ar.y-Math.sin(an)*13);c.stroke();c.beginPath();c.arc(ar.x,ar.y,2.4,0,6.3);c.fill();}
+ ctx=c;try{if(player)drawPerson(zmb.cx,zmb.cy,CHARS[player.key],0,Math.cos(zmb.ang)<0);}catch(e){}ctx=_o;
+ c.save();c.translate(zmb.cx,zmb.cy);c.rotate(zmb.ang);c.strokeStyle='#6b3e1e';c.lineWidth=3;c.beginPath();c.arc(14,0,13,-1.4,1.4);c.stroke();c.strokeStyle='#eee';c.lineWidth=1;c.beginPath();c.moveTo(14+13*Math.cos(-1.4),13*Math.sin(-1.4));c.lineTo(14+13*Math.cos(1.4),13*Math.sin(1.4));c.stroke();c.restore();
+ c.fillStyle='rgba(0,0,0,.5)';c.fillRect(10,10,170,16);c.fillStyle='#e44';c.fillRect(10,10,170*Math.max(0,zmb.life)/100,16);c.strokeStyle='#fff';c.lineWidth=1;c.strokeRect(10,10,170,16);
+ c.fillStyle='#fff';c.font='bold 13px Trebuchet MS';c.textAlign='left';c.fillText('❤ '+Math.max(0,zmb.life),14,23);
+ c.textAlign='right';c.fillText('Zabito: '+zmb.killed,W-12,22);if(zmb.started&&!zmb.done)c.fillText('Čas: '+Math.round((now-zmb.t0)/1000)+' s',W-12,40);c.textAlign='left';
+ if(zmb.cd>0){var n=Math.max(0,Math.ceil(zmb.cd/800)-1);c.fillStyle='#fff';c.textAlign='center';c.font='bold 18px Trebuchet MS';c.fillText('Připrav se!',W/2,H*0.30);c.font='bold 72px Trebuchet MS';c.fillText(''+n,W/2,H/2+10);c.textAlign='left';}
+ if(zmb.done){c.fillStyle='rgba(0,0,0,.62)';c.fillRect(0,0,W,H);c.fillStyle='#fff';c.textAlign='center';c.font='bold 30px Trebuchet MS';c.fillText(zmb.result==='win'?'🏆 Přežil jsi apokalypsu!':'💀 Sežrali tě!',W/2,H/2-14);c.font='bold 17px Trebuchet MS';c.fillText('Zabito koní: '+zmb.killed+'  ·  Čas: '+Math.round((zmb.endT-zmb.t0)/1000)+' s  ·  Životy: '+Math.max(0,zmb.life),W/2,H/2+22);c.textAlign='left';}}
+zcv.addEventListener('mousedown',function(e){var r=zcv.getBoundingClientRect();zmbMove((e.clientX-r.left)*zcv.width/r.width,(e.clientY-r.top)*zcv.height/r.height);zmbDown();});
+zcv.addEventListener('mousemove',function(e){var r=zcv.getBoundingClientRect();zmbMove((e.clientX-r.left)*zcv.width/r.width,(e.clientY-r.top)*zcv.height/r.height);});
+zcv.addEventListener('touchstart',function(e){e.preventDefault();var t=e.touches[0],r=zcv.getBoundingClientRect();zmbMove((t.clientX-r.left)*zcv.width/r.width,(t.clientY-r.top)*zcv.height/r.height);zmbDown();},{passive:false});
+zcv.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0],r=zcv.getBoundingClientRect();zmbMove((t.clientX-r.left)*zcv.width/r.width,(t.clientY-r.top)*zcv.height/r.height);},{passive:false});
+Array.prototype.forEach.call(document.querySelectorAll('#zmbChoose .dbtn'),function(b){b.onclick=function(){zmbStart(b.getAttribute('data-d'));zmbLast=performance.now();cancelAnimationFrame(zmbRAF);zmbRAF=requestAnimationFrame(zmbLoop);};});
+document.getElementById('zmbClose').onclick=function(){closeZmb();};
 /* ===== TRAIL (závod) — etapa 1 ===== */
 var TRAIL_ORDER=['start','slalom','brod','barely','dzban','bocak','byk','branka','lcouv','kelimek','mustek','cil'];
 var TRAIL_NAME={start:'Start',slalom:'Slalom',brod:'Brod',barely:'Tři barely',dzban:'Džbán',bocak:'Bočák',byk:'Garoča',branka:'Branka',lcouv:'Couvání do L',kelimek:'Kelímek',mustek:'Můstek',cil:'Cíl'};
-var trail={mode:null,phase:null,order:TRAIL_ORDER.slice(),inArena:false,idx:0,results:[],prevT:0,playStart:0,pendingTransit:0,started:false,_py:null};
+var trail={mode:null,phase:null,order:TRAIL_ORDER.slice(),inArena:false,idx:0,results:[],prevT:0,playStart:0,pendingTransit:0,started:false,_py:null,diff:'L'};
 var trailMG={open:false,type:null,btn:null};
 var trailUI=false,trDrag=null;
 function trailIcon(t){if(t==='start')return OBSTICON.start;if(t==='cil')return OBSTICON.cil;if(MGAMES[t]&&MGAMES[t].icon)return MGAMES[t].icon;var em={lcouv:'🔔',byk:'🐂',bocak:'<span style="display:inline-block;transform:rotate(90deg)">🪵</span>',brod:'💦',kelimek:'🥤'};return em[t]||'';}
 function obstByType(t){for(var i=0;i<obstacles.length;i++)if(obstacles[i].t===t)return obstacles[i];return null;}
 function openTrailDialog(){trailUI=true;document.getElementById('trDlg').style.display='flex';}
-function openTrailOrder(){trailUI=true;buildTrailTable();document.getElementById('trOrder').style.display='flex';}
+function trSelDiff(d){trail.diff=d;Array.prototype.forEach.call(document.querySelectorAll('#trDiff .trd'),function(x){x.style.boxShadow=(x.getAttribute('data-d')===d)?'0 0 0 3px #2e9e4f':'none';});}
+function openTrailOrder(){trailUI=true;buildTrailTable();trSelDiff(trail.diff||'L');document.getElementById('trOrder').style.display='flex';}
 function buildTrailTable(){var box=document.getElementById('trTable'),ord=trail.order,i,h=`<table style="border-collapse:collapse;margin:0 auto"><tr>`;for(i=0;i<ord.length;i++)h+=`<td style="padding:3px 5px;font-weight:900;color:#7a4a1a;font-size:13px">${i+1}</td>`;h+=`</tr><tr>`;for(i=0;i<ord.length;i++)h+=`<td style="padding:3px 5px;font-size:10px;white-space:nowrap;color:#5a3a1a">${TRAIL_NAME[ord[i]]}</td>`;h+=`</tr><tr>`;for(i=0;i<ord.length;i++){var lk=(ord[i]==='start'||ord[i]==='cil');h+=`<td data-i="${i}" class="trCell" style="padding:6px;border:2px solid ${lk?'#c4c4c4':'#b58a4a'};border-radius:8px;background:${lk?'#eee':'#fff'};cursor:${lk?'default':'grab'};touch-action:none">${trailIcon(ord[i])}</td>`;}h+=`</tr></table>`;box.innerHTML=h;Array.prototype.forEach.call(box.querySelectorAll('.trCell'),function(c){var ii=+c.getAttribute('data-i');if(ord[ii]==='start'||ord[ii]==='cil')return;c.addEventListener('pointerdown',function(e){trDrag=ii;c.style.opacity='0.45';e.preventDefault();});});}
 function buildTrailStrip(){var box=document.getElementById('trStrip');if(!box)return;var ord=trail.order,h='',i;for(i=0;i<ord.length;i++){var cur=(i===trail.idx);h+=`<div style="display:inline-flex;flex-direction:column;align-items:center;min-width:30px;padding:2px 3px;border-radius:7px;background:${cur?'rgba(46,158,79,.92)':'rgba(40,28,16,.78)'};border:2px solid ${cur?'#fff':'transparent'}"><span style="font-size:10px;font-weight:900;color:#fff;line-height:1">${i+1}</span><span style="display:inline-block;transform:scale(0.8);transform-origin:center">${trailIcon(ord[i])}</span></div>`;}box.innerHTML=h;}
 window.addEventListener('pointerup',function(e){if(trDrag===null)return;var el=document.elementFromPoint(e.clientX,e.clientY),cell=(el&&el.closest)?el.closest('.trCell'):null;if(cell){var j=+cell.getAttribute('data-i'),ord=trail.order;if(j!==trDrag&&ord[j]!=='start'&&ord[j]!=='cil'){var tmp=ord[trDrag];ord[trDrag]=ord[j];ord[j]=tmp;}}trDrag=null;if(document.getElementById('trOrder').style.display!=='none')buildTrailTable();buildTrailStrip();});
@@ -738,24 +799,24 @@ function trailDQ(tt){trail.phase='done';trailMG.open=false;trailRestoreBtns();sh
 function trailFinish(){var now=performance.now();trail.results.push({type:'cil',name:'Cíl',transit:now-(trail.prevT||now),mg:0,score:null});trail.phase='done';trailRestoreBtns();showTrailResults(false);}
 function checkTrailCross(){if(trail.phase!=='race'||!player.mounted){trail._side=0;return;}var tt=trail.order[trail.idx];if(tt!=='start'&&tt!=='cil'){trail._side=0;return;}var o=obstByType(tt);if(!o)return;var cx=o.x+o.w/2,cy=o.y+o.h/2,rot=o.rot||0,ux=Math.sin(rot),uy=-Math.cos(rot),wx=Math.cos(rot),wy=Math.sin(rot),dx=player.x-cx,dy=player.y-cy,proj=dx*ux+dy*uy,lat=Math.abs(dx*wx+dy*wy),hw=o.w/2+26,d=Math.hypot(dx,dy);if(d<120){var nw=performance.now();if(nw>(trail._hintT||0)){trail._hintT=nw+4500;toast('Projeď '+(tt==='start'?'Startem':'Cílem')+' od spodku ke špičatým vlajkám!');}}if(lat<hw){var ns=(proj<0)?1:-1;if(!trail._side)trail._side=ns;else if(trail._side===1&&ns===-1){trail._side=0;trailCross(tt,true);}else if(trail._side===-1&&ns===1){trail._side=0;trailCross(tt,false);}}else trail._side=0;}
 function trailCross(tt,correct){if(!correct){toast('⚠ '+(tt==='start'?'Start':'Cíl')+' projet špatným směrem – diskvalifikace!');trailDQ(tt);return;}if(tt==='start'){trail.started=true;trail.rider=(CHARS[player.key]&&CHARS[player.key].name)||player.key;trail.horse=(player.mountHorse&&player.mountHorse.name)||'—';trail.prevT=performance.now();trail.idx=1;buildTrailStrip();toast('🏁 Start! Čas běží.');}else trailFinish();}
-function showTrailResults(state){var box=document.getElementById('trResBody'),rows=trail.results,i,sMg=0,sTr=0,nSc=0,sumSc=0;var h=`<table style="border-collapse:collapse;margin:0 auto;font-size:12px"><tr style="color:#7a4a1a;font-weight:900"><td style="padding:3px 8px;text-align:left">Překážka</td><td style="padding:3px 8px">Mezičas</td><td style="padding:3px 8px">Čas hry</td><td style="padding:3px 8px">%</td></tr>`;for(i=0;i<rows.length;i++){var r=rows[i];sTr+=r.transit;if(r.mg)sMg+=r.mg;if(r.score!=null){nSc++;sumSc+=r.score;}h+=`<tr><td style="padding:2px 8px;text-align:left">${r.name}</td><td style="padding:2px 8px">${(r.transit/1000).toFixed(1)} s</td><td style="padding:2px 8px">${r.mg?((r.mg/1000).toFixed(1)+' s'):'—'}</td><td style="padding:2px 8px">${r.score!=null?r.score+' %':'—'}</td></tr>`;}var total=sMg+sTr,avg=nSc?Math.round(sumSc/nSc):0;h+=`<tr style="font-weight:900;border-top:2px solid #b58a4a"><td style="padding:4px 8px;text-align:left">Součet</td><td style="padding:4px 8px">${(sTr/1000).toFixed(1)} s</td><td style="padding:4px 8px">${(sMg/1000).toFixed(1)} s</td><td style="padding:4px 8px">${avg} %</td></tr><tr style="font-weight:900;color:#2e7a3a"><td colspan="2" style="padding:4px 8px;text-align:left">Celkový čas</td><td colspan="2" style="padding:4px 8px">${(total/1000).toFixed(1)} s</td></tr></table>`;box.innerHTML=h;var ttl=document.getElementById('trResTitle');ttl.textContent=(state==='dq')?'❌ Diskvalifikace':(state===true?'Trail ukončen':'🏆 Gratulujeme – závod dokončen!');var DLAB={Z:'Z (lehká)',L:'L (střední)',S:'S (těžká)'},dset={};for(var di=0;di<trail.results.length;di++){if(trail.results[di].diff)dset[trail.results[di].diff]=1;}var dkeys=Object.keys(dset),dtxt=(dkeys.length===1)?(DLAB[dkeys[0]]||dkeys[0]):(dkeys.length>1?'smíšená':'—');document.getElementById('trResWho').textContent='Jezdec: '+(trail.rider||'—')+' na koni '+(trail.horse||'—')+' · Obtížnost: '+dtxt;document.getElementById('trResult').style.display='flex';trailUI=true;}
+function showTrailResults(state){var box=document.getElementById('trResBody'),rows=trail.results,i,sMg=0,sTr=0,nSc=0,sumSc=0;var h=`<table style="border-collapse:collapse;margin:0 auto;font-size:12px"><tr style="color:#7a4a1a;font-weight:900"><td style="padding:3px 8px;text-align:left">Překážka</td><td style="padding:3px 8px">Mezičas</td><td style="padding:3px 8px">Čas hry</td><td style="padding:3px 8px">%</td></tr>`;for(i=0;i<rows.length;i++){var r=rows[i];sTr+=r.transit;if(r.mg)sMg+=r.mg;if(r.score!=null){nSc++;sumSc+=r.score;}h+=`<tr><td style="padding:2px 8px;text-align:left">${r.name}</td><td style="padding:2px 8px">${(r.transit/1000).toFixed(1)} s</td><td style="padding:2px 8px">${r.mg?((r.mg/1000).toFixed(1)+' s'):'—'}</td><td style="padding:2px 8px">${r.score!=null?r.score+' %':'—'}</td></tr>`;}var total=sMg+sTr,avg=nSc?Math.round(sumSc/nSc):0;h+=`<tr style="font-weight:900;border-top:2px solid #b58a4a"><td style="padding:4px 8px;text-align:left">Součet</td><td style="padding:4px 8px">${(sTr/1000).toFixed(1)} s</td><td style="padding:4px 8px">${(sMg/1000).toFixed(1)} s</td><td style="padding:4px 8px">${avg} %</td></tr><tr style="font-weight:900;color:#2e7a3a"><td colspan="2" style="padding:4px 8px;text-align:left">Celkový čas</td><td colspan="2" style="padding:4px 8px">${(total/1000).toFixed(1)} s</td></tr></table>`;box.innerHTML=h;var ttl=document.getElementById('trResTitle');ttl.textContent=(state==='dq')?'❌ Diskvalifikace':(state===true?'Trail ukončen':'🏆 Gratulujeme – závod dokončen!');var DLAB={Z:'Z (lehká)',L:'L (střední)',S:'S (těžká)'};document.getElementById('trResWho').textContent='Jezdec: '+(trail.rider||'—')+' na koni '+(trail.horse||'—')+' · Obtížnost: '+(DLAB[trail.diff]||trail.diff||'—');document.getElementById('trResult').style.display='flex';trailUI=true;}
 document.getElementById('trTrain').onclick=function(){trail.mode='train';trailUI=false;document.getElementById('trDlg').style.display='none';};
 document.getElementById('trRace').onclick=function(){trail.mode='trail';trail.order=TRAIL_ORDER.slice();document.getElementById('trDlg').style.display='none';trail.idx=0;buildTrailStrip();openTrailOrder();};
 document.getElementById('trStart').onclick=function(){document.getElementById('trOrder').style.display='none';trailUI=false;trail.phase='race';trail.started=false;trail.idx=0;trail.results=[];trail.prevT=0;trail.playStart=0;trail._py=player.y;trail._side=0;trail._hintT=0;trailMG.open=false;buildTrailStrip();toast('Závod připraven – projeď Startem zdola nahoru!');};
-document.getElementById('trCancel').onclick=function(){document.getElementById('trOrder').style.display='none';openTrailDialog();};document.getElementById('trResClose').onclick=function(){document.getElementById('trResult').style.display='none';trail.phase=null;trail.mode='train';trail.idx=0;trail.results=[];trail._side=0;trailMG.open=false;trailUI=false;trailRestoreBtns();};
+document.getElementById('trCancel').onclick=function(){document.getElementById('trOrder').style.display='none';openTrailDialog();};Array.prototype.forEach.call(document.querySelectorAll('#trDiff .trd'),function(b){b.onclick=function(){trSelDiff(b.getAttribute('data-d'));};});document.getElementById('trResClose').onclick=function(){document.getElementById('trResult').style.display='none';trail.phase=null;trail.mode='train';trail.idx=0;trail.results=[];trail._side=0;trailMG.open=false;trailUI=false;trailRestoreBtns();};
 /* ---------- smyčka ---------- */
 var last=performance.now(),introOpen=true;
 function loop(now){var dt=Math.min(50,now-last);last=now;
- if(!introOpen&&!pongActive&&!bykActive&&!kelActive&&!mgActive&&!hofActive){
+ if(!introOpen&&!pongActive&&!bykActive&&!kelActive&&!mgActive&&!hofActive&&!zmbActive){
    updatePlayer(dt);
    for(var i=0;i<npcs.length;i++)updateNPC(npcs[i],dt,now);
    updateRiders(now);updateDogs(dt);updateChickens(dt);updateBall();
    updateHorses(dt,now);updateTufts(dt,now);updateHayBales(dt);if(player.mounted&&!player.rideState&&!bykActive&&!kelActive&&!mgActive&&!trailUI){if(trail.phase==='race'){var tgt=trail.order[trail.idx];if(tgt&&tgt!=='start'&&tgt!=='cil'){var ob=obstByType(tgt);if(ob&&Math.abs(player.x-(ob.x+ob.w/2))<ob.w/2+16&&Math.abs(player.y-(ob.y+ob.h/2))<ob.h/2+16){if(tgt==='byk'){trailOpenMG('byk');openByk();}else if(tgt==='kelimek'){trailOpenMG('kelimek');openKelim();}else if(MGAMES[tgt]){trailOpenMG(tgt);openMG(tgt);}}}}else{for(var wi=0;wi<obstacles.length;wi++){var wo=obstacles[wi];var nearM=Math.abs(player.x-(wo.x+wo.w/2))<wo.w/2+16&&Math.abs(player.y-(wo.y+wo.h/2))<wo.h/2+16;if(!nearM)continue;if(wo.t==='byk'){if(now>bykCd)openByk();break;}if(wo.t==='kelimek'){if(now>kelCd)openKelim();break;}if(wo.t==='start'||wo.t==='cil')continue;if(MGAMES[wo.t]){if(now>mgCd)openMG(wo.t);break;}if(now>(wo.weCd||0)){wo.weCd=now+3500;weAction(wo,now);}}}}
    // hráč sbírá koblihy/sype radost když projde
    for(var c=koblihy.length-1;c>=0;c--){if(Math.hypot(player.x-koblihy[c].x,player.y-koblihy[c].y)<26){if(player.muck){if((player.cart||0)<6){koblihy.splice(c,1);player.cart=(player.cart||0)+1;spawnP(player.x,player.y-20,'💩','#fff');}}else{koblihy.splice(c,1);careScore+=2;spawnP(player.x,player.y-20,'✨','#fff');}}}if(player.muck&&(player.cart||0)>0&&Math.hypot(player.x-HALDA.x,player.y-HALDA.y)<48){player.cart=0;spawnP(HALDA.x,HALDA.y-12,'💨','#fff');toast('Vyklopeno na haldu hnoje!');}
-   updateParts();updateWorld(dt);updateGates(dt);separateEntities();checkArenaEntry();checkTrailCross();scheduleMsg(now);updateCam();
+   updateParts();updateWorld(dt);updateGates(dt);separateEntities();checkArenaEntry();checkTrailCross();scheduleMsg(now);updateCam();if(player.sleeping){if(!player.sleepT)player.sleepT=now;if(!player.dreamDone&&!zmbActive&&now-player.sleepT>2600)openZmb();}else{player.sleepT=0;player.dreamDone=false;}
  }
- if(!pongActive&&!bykActive&&!kelActive&&!mgActive&&!hofActive)draw(now);
+ if(!pongActive&&!bykActive&&!kelActive&&!mgActive&&!hofActive&&!zmbActive)draw(now);
  requestAnimationFrame(loop);
 }
 
@@ -783,7 +844,7 @@ document.getElementById('pongClose').onclick=function(){pongActive=false;pongEl.
 /* ---------- MINIHRA BÝK (garoča) ---------- */
 var bcv=document.getElementById('bykCanvas'),bcx=bcv.getContext('2d');
 var bykActive=false,byk=null,bykRAF=0,bykCd=0,bykLast=0;
-function openByk(){closeCtx();closeHorse();bykActive=true;introOpen=false;document.getElementById('byk').style.display='flex';bykChoose(true);}
+function openByk(){closeCtx();closeHorse();bykActive=true;introOpen=false;document.getElementById('byk').style.display='flex';if(trail.phase==='race'){bykStart(trail.diff);}else{bykChoose(true);}}
 function bykChoose(initial){cancelAnimationFrame(bykRAF);byk=null;document.getElementById('bykChoose').style.display='flex';if(initial)document.getElementById('bykMsg').textContent='Zvol obtížnost: Z lehká, L střední, S těžká.';bykDrawIdle();}
 function bykDrawIdle(){var c=bcx,W=bcv.width,H=bcv.height;c.fillStyle='#bfe3f2';c.fillRect(0,0,W,H);c.fillStyle='#cdb98a';c.fillRect(0,H*0.8,W,H*0.2);}
 function bykStart(diff){document.getElementById('bykChoose').style.display='none';var rmul=diff==='S'?0.5:(diff==='L'?0.6667:1);byk={t:0,done:false,exit:0,score:0,miss:false,cd:3200,diff:diff,rmul:rmul,tipx:bcv.width*0.5,tipy:bcv.height*0.4,mx:bcv.width*0.5,my:bcv.height*0.4,rx:0,ry:0,rr:1};document.getElementById('bykMsg').textContent='Miř garočou na žlutý kruh a klikni/pusť, až ho máš na špičce!';bykLast=performance.now();cancelAnimationFrame(bykRAF);bykRAF=requestAnimationFrame(bykLoop);}
@@ -821,7 +882,7 @@ document.getElementById('bykClose').onclick=function(){closeByk();};
 var kcv=document.getElementById('kelCanvas'),kcx=kcv.getContext('2d');
 var kelActive=false,kel=null,kelRAF=0,kelCd=0,kelLast=0,kelDiff='Z';
 var KEL_DIFF={Z:{hw:46,amp:14,waves:1.5},L:{hw:30,amp:24,waves:2.5},S:{hw:18,amp:32,waves:3.5}};
-function openKelim(){closeCtx();closeHorse();kelActive=true;introOpen=false;document.getElementById('kel').style.display='flex';kelChoose(true);}
+function openKelim(){closeCtx();closeHorse();kelActive=true;introOpen=false;document.getElementById('kel').style.display='flex';if(trail.phase==='race'){kelStart(trail.diff);}else{kelChoose(true);}}
 function kelChoose(initial){cancelAnimationFrame(kelRAF);var W=kcv.width,H=kcv.height;kel={choose:true,diff:'Z',lp:W*0.20,rp:W*0.80,topY:H*0.44,cupX:W*0.80,cupY:H*0.44+18,onPole:'right',grab:false,done:false,fallen:false,score:100,pen:0};document.getElementById('kelChoose').style.display='flex';if(initial)document.getElementById('kelMsg').textContent='Zvol obtížnost: Z lehká, L střední, S těžká.';kelDraw();}
 function kelStart(diff){kelDiff=diff;document.getElementById('kelChoose').style.display='none';var W=kcv.width,H=kcv.height;kel={choose:false,diff:diff,lp:W*0.20,rp:W*0.80,topY:H*0.44,cupX:W*0.80,cupY:H*0.44+18,onPole:'right',grab:false,done:false,fallen:false,score:100,pen:0,cd:3200};document.getElementById('kelMsg').textContent='Klikni na kelímek, vytáhni ho nahoru a po cestě přenes na levou tyč.';kelLast=performance.now();cancelAnimationFrame(kelRAF);kelRAF=requestAnimationFrame(kelLoop);}
 function closeKelim(){kelActive=false;document.getElementById('kel').style.display='none';cancelAnimationFrame(kelRAF);last=performance.now();kelCd=performance.now()+5000;}
@@ -849,7 +910,7 @@ Array.prototype.forEach.call(document.querySelectorAll('#bykChoose .dbtn'),funct
 /* ====== OBECNÝ ENGINE MINIHER ====== */
 var mcv=document.getElementById('mgCanvas'),mcx=mcv.getContext('2d');
 var mgActive=false,mgRAF=0,mgLast=0,mgCd=0,mgType=null,MG=null;
-function openMG(type){closeCtx();closeHorse();mgActive=true;introOpen=false;mgType=type;document.getElementById('mg').style.display='flex';document.getElementById('mgTitle').innerHTML=(MGAMES[type].icon?MGAMES[type].icon+' ':'')+MGAMES[type].title;mgChoose(true);}
+function openMG(type){closeCtx();closeHorse();mgActive=true;introOpen=false;mgType=type;document.getElementById('mg').style.display='flex';document.getElementById('mgTitle').innerHTML=(MGAMES[type].icon?MGAMES[type].icon+' ':'')+MGAMES[type].title;if(trail.phase==='race'){mgStart(trail.diff);}else{mgChoose(true);}}
 function mgChoose(initial){cancelAnimationFrame(mgRAF);MG=null;document.getElementById('mgChoose').style.display='flex';if(initial)document.getElementById('mgMsg').textContent='Zvol obtížnost: Z lehká, L střední, S těžká.';mgIdle();}
 function mgIdle(){var c=mcx,W=mcv.width,H=mcv.height;c.fillStyle='#cdb98a';c.fillRect(0,0,W,H);c.fillStyle='#c4af80';c.fillRect(0,0,W,H*0.18);}
 function mgStart(diff){var def=MGAMES[mgType];MG={diff:diff,done:false,score:100,pen:0,t:0,cd:3200};def.start(MG,diff,mcv.width,mcv.height);document.getElementById('mgChoose').style.display='none';document.getElementById('mgMsg').textContent=def.hint||'';mgLast=performance.now();cancelAnimationFrame(mgRAF);mgRAF=requestAnimationFrame(mgLoop);}
