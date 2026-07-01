@@ -145,7 +145,7 @@
     <p style="font-weight:800;color:#7a4a1a;margin-top:8px">Zvol si postavu, kterou chceš v konírně hrát, nebo hrej jako návštěvník — klikni na postavu a hra začne:</p>
     <div class="chars" id="charList"></div>
     <p class="disc">Už jsi objevil minihru pinpong, minihry na jízdárně v rámci tréninku nebo závodu, síň slávy konírny a že jen Martin může vozit věci s nakladačem?</p>
-    <p style="font-size:11px;color:#9a7a4a;margin-top:12px;text-align:center;letter-spacing:.3px">©MondAI · v1.064</p>
+    <p style="font-size:11px;color:#9a7a4a;margin-top:12px;text-align:center;letter-spacing:.3px">©MondAI · v1.065</p>
   </div>
 </div>
 <div id="pong" class="overlay">
@@ -754,7 +754,7 @@ function zmbDraw(now){var c=zcx,W=zcv.width,H=zcv.height;
  c.fillStyle='#cfc9e6';c.beginPath();c.arc(W-50,46,20,0,6.3);c.fill();
  var _o=ctx,i;
  for(i=0;i<zmb.zombies.length;i++){var z=zmb.zombies[i];
-  var hh={x:0,y:0,size:z.size,body:z.body,mane:z.mane,shadeC:z.shadeC,phase:z.phase,bob:0.5,moving:true,ang:(z.ang||0)+Math.PI/2,name:''};
+  var hh={x:0,y:0,size:z.size,body:z.body,mane:z.mane,shadeC:z.shadeC,phase:z.phase,bob:0.5,moving:true,ang:(z.ang||0),name:''};
   c.save();c.translate(z.x,z.y);ctx=c;try{drawHorse(hh,now);}catch(e){}ctx=_o;c.restore();
   var dx=zmb.cx-z.x,dy=zmb.cy-z.y,d=Math.hypot(dx,dy)||1,hx=z.x+dx/d*22*z.size,hy=z.y+dy/d*22*z.size,px=-dy/d,py=dx/d;
   c.save();c.fillStyle='#ff2a2a';c.shadowColor='#ff0000';c.shadowBlur=9;c.beginPath();c.arc(hx+px*4*z.size,hy+py*4*z.size,2.6*z.size,0,6.3);c.arc(hx-px*4*z.size,hy-py*4*z.size,2.6*z.size,0,6.3);c.fill();c.restore();}
