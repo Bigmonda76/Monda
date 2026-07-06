@@ -106,6 +106,7 @@
     #copyr{left:0;right:0;bottom:6px;text-align:center;width:100%;}
   }
 .diffpick{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(40,28,16,.9);padding:16px 20px;border-radius:14px;z-index:6;text-align:center;display:flex;flex-direction:column;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.5)}.diffpick .dt{color:#ffe9b0;font-weight:900;font-size:16px;margin-bottom:18px;white-space:nowrap}.diffpick .drow{display:flex;gap:12px}.dbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:62px;border:none;border-radius:12px;background:#ffd36b;color:#5a3a1a;font-weight:900;font-size:24px;cursor:pointer;box-shadow:0 3px 0 #c9a24a;line-height:1}.dbtn small{font-size:10px;font-weight:700;margin-top:3px}.dbtn:hover{background:#ffe09a}.dbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #c9a24a}
+@media (max-height:600px){.overlay canvas{max-height:86vh !important;max-width:98vw !important;}}
 </style>
 </head>
 <body>
@@ -144,8 +145,8 @@
     <p class="det"><span class="k">Nakládka koně do hengru</span> na koni přijeď k otevřenému vozíku a klikni na něj – kůň se naloží; dalším klikem ho vyložíš.</p>
     <p style="font-weight:800;color:#7a4a1a;margin-top:8px">Zvol si postavu, kterou chceš v konírně hrát, nebo hrej jako návštěvník — klikni na postavu a hra začne:</p>
     <div class="chars" id="charList"></div>
-    <p class="disc">Už jsi objevil minihru pinpong, minihry na jízdárně v rámci tréninku nebo závodu, síň slávy konírny a že jen Martin může vozit věci s nakladačem?</p>
-    <p style="font-size:11px;color:#9a7a4a;margin-top:12px;text-align:center;letter-spacing:.3px">©MondAI · v1.065</p>
+    <p class="disc">Už jsi objevil síň slávy, pingpong, zombie apokalypsu a Martina na nakladači?</p>
+    <p style="font-size:11px;color:#9a7a4a;margin-top:12px;text-align:center;letter-spacing:.3px">©MondAI · v1.066</p>
   </div>
 </div>
 <div id="pong" class="overlay">
@@ -179,7 +180,8 @@
   <div style="color:#fff;font-weight:900;font-size:18px;margin-bottom:6px">🧟 Koňská zombie apokalypsa</div>
   <div style="position:relative"><canvas id="zmbCanvas" width="760" height="460" style="background:#1a1426;border-radius:10px;touch-action:none;max-width:94vw;max-height:66vh;cursor:crosshair"></canvas><div id="zmbChoose" class="diffpick"><div class="dt">Zvol obtížnost snu:</div><div class="drow"><button class="dbtn" data-d="Z">Z<small>14 koní</small></button><button class="dbtn" data-d="L">L<small>14+28</small></button><button class="dbtn" data-d="S">S<small>14+28+56</small></button></div></div></div>
   <div id="zmbMsg" style="color:#ffe9b0;font-weight:800;margin-top:8px;height:20px"></div>
-  <div style="display:flex;gap:10px;margin-top:12px"><button class="bigbtn" id="zmbClose">Probudit se</button></div>
+  <div id="zmbHelp" style="color:#cbb8e0;font-size:12px;max-width:520px;margin:2px auto 0">Otáčej se myší nebo klávesami A/D · Střílej klikem nebo mezerníkem · Sestřel všechny zombie koně dřív, než tě sežerou!</div>
+  <div style="display:flex;gap:10px;margin-top:12px"><button class="bigbtn" id="zmbAgain">🧟 Znovu zazombit</button><button class="bigbtn" id="zmbClose">Probudit se</button></div>
 </div>
 <div id="trResult" class="overlay" style="display:none"><div class="card" style="max-width:560px;text-align:center"><h2 id="trResTitle">🏆 Gratulujeme!</h2><p id="trResWho" style="font-weight:800;color:#7a4a1a;margin:2px 0 8px"></p><div id="trResBody" style="overflow-x:auto;margin:8px 0"></div><button class="bigbtn" id="trResClose">Zpět do konírny</button></div></div>
 <div id="trStrip" style="position:fixed;top:4px;left:50%;transform:translateX(-50%);display:none;gap:3px;max-width:97vw;overflow-x:auto;z-index:20;padding:3px 6px;background:rgba(255,255,255,.14);border-radius:10px;align-items:flex-end;pointer-events:none"></div>
@@ -646,7 +648,7 @@ function drawArea(a){if(!a.c)return;ctx.fillStyle=a.c;ctx.fillRect(a.x,a.y,a.w,a
 
 }
 function goKadi(ent){if(ent.mounted||ent.holding)return;if(KADIB.occ&&KADIB.occ!==ent)return;ent.goingKadi=true;ent.kadi=false;ent.tx=KADIB.x+KADIB.w/2;ent.ty=KADIB.y+KADIB.h+8;}
-function drawLoader(x,y,load){ctx.save();ctx.translate(x,y);ctx.scale(1.6,1.6);ctx.translate(-x,-y);ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(x-22,y+9,46,6);ctx.fillStyle='#3a8a3a';ctx.fillRect(x-14,y-10,30,18);ctx.fillStyle='#2a6a2a';ctx.fillRect(x-2,y-20,16,12);ctx.fillStyle='#bfe6f5';ctx.fillRect(x+1,y-18,10,7);ctx.fillStyle='#222';ctx.beginPath();ctx.arc(x-10,y+9,7,0,6.3);ctx.fill();ctx.beginPath();ctx.arc(x+12,y+9,9,0,6.3);ctx.fill();ctx.fillStyle='#888';ctx.beginPath();ctx.arc(x-10,y+9,3,0,6.3);ctx.fill();ctx.beginPath();ctx.arc(x+12,y+9,4,0,6.3);ctx.fill();ctx.strokeStyle='#d6a72b';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x-12,y-4);ctx.lineTo(x-26,y+3);ctx.stroke();ctx.fillStyle='#d6a72b';ctx.fillRect(x-32,y+2,9,8);if(load==='seno'){ctx.fillStyle='#d9b25a';ctx.beginPath();ctx.arc(x-27,y-1,9,0,6.3);ctx.fill();ctx.strokeStyle='#a8842f';ctx.lineWidth=2;ctx.stroke();}else if(load==='slama'){ctx.fillStyle='#ecd98a';ctx.fillRect(x-36,y-9,17,13);ctx.strokeStyle='#c9b25a';ctx.lineWidth=2;ctx.strokeRect(x-36,y-9,17,13);}else if(load==='hnuj'){ctx.fillStyle='#6b4a2b';ctx.beginPath();ctx.arc(x-27,y,8,0,6.3);ctx.fill();}ctx.restore();}
+function drawLoader(x,y,load){ctx.save();ctx.translate(x,y);ctx.scale(1.6,1.6);ctx.translate(-x,-y);ctx.fillStyle='rgba(0,0,0,.18)';ctx.fillRect(x-22,y+9,46,6);ctx.fillStyle='#d9822b';ctx.fillRect(x-14,y-10,30,18);ctx.fillStyle='#b5631f';ctx.fillRect(x-2,y-20,16,12);ctx.fillStyle='#bfe6f5';ctx.fillRect(x+1,y-18,10,7);ctx.fillStyle='#222';ctx.beginPath();ctx.arc(x-10,y+9,7,0,6.3);ctx.fill();ctx.beginPath();ctx.arc(x+12,y+9,9,0,6.3);ctx.fill();ctx.fillStyle='#888';ctx.beginPath();ctx.arc(x-10,y+9,3,0,6.3);ctx.fill();ctx.beginPath();ctx.arc(x+12,y+9,4,0,6.3);ctx.fill();ctx.strokeStyle='#d6a72b';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x-12,y-4);ctx.lineTo(x-26,y+3);ctx.stroke();ctx.fillStyle='#d6a72b';ctx.fillRect(x-32,y+2,9,8);if(load==='seno'){ctx.fillStyle='#d9b25a';ctx.beginPath();ctx.arc(x-27,y-1,9,0,6.3);ctx.fill();ctx.strokeStyle='#a8842f';ctx.lineWidth=2;ctx.stroke();}else if(load==='slama'){ctx.fillStyle='#ecd98a';ctx.fillRect(x-36,y-9,17,13);ctx.strokeStyle='#c9b25a';ctx.lineWidth=2;ctx.strokeRect(x-36,y-9,17,13);}else if(load==='hnuj'){ctx.fillStyle='#6b4a2b';ctx.beginPath();ctx.arc(x-27,y,8,0,6.3);ctx.fill();}ctx.restore();}
 function drawBale(c,b){var x=b.x,y=b.y;c.fillStyle='rgba(0,0,0,.16)';if(b.t==='seno'){c.fillRect(x-13,y+9,26,5);c.fillStyle='#a9b85f';c.beginPath();c.arc(x,y,15,0,6.3);c.fill();c.strokeStyle='#7e9040';c.lineWidth=2;c.beginPath();c.arc(x,y,15,0,6.3);c.stroke();c.beginPath();c.arc(x,y,10,0,6.3);c.stroke();c.beginPath();c.arc(x,y,5,0,6.3);c.stroke();}else{c.fillRect(x-15,y+9,30,5);c.fillStyle='#ecd98a';c.fillRect(x-15,y-11,30,22);c.strokeStyle='#c9b25a';c.lineWidth=2;c.strokeRect(x-15,y-11,30,22);c.beginPath();c.moveTo(x-6,y-11);c.lineTo(x-6,y+11);c.moveTo(x+6,y-11);c.lineTo(x+6,y+11);c.stroke();}}function drawBales(){for(var i=0;i<bales.length;i++)drawBale(ctx,bales[i]);}function baleAt(wx,wy){for(var i=0;i<bales.length;i++){var b=bales[i];if(Math.abs(wx-b.x)<17&&Math.abs(wy-b.y)<17)return b;}return null;}
 function loadBale(type){if(player.loaderLoad){toast('Nejdřív slož stávající náklad.');return;}var bi=-1,bd=82;for(var i=0;i<bales.length;i++){if(bales[i].t!==type)continue;var d=Math.hypot(player.x-bales[i].x,player.y-bales[i].y);if(d<bd){bd=d;bi=i;}}if(bi<0){toast('Žádný balík '+(type==='seno'?'sena':'slámy')+' poblíž.');return;}bales.splice(bi,1);player.loaderLoad=type;toast('Balík '+(type==='seno'?'sena':'slámy')+' naložen.');}
 function dropLoad(){var L=player.loaderLoad;if(!L){toast('Nakladač je prázdný.');return;}if(L==='hnuj'){if(player.x<70||player.x>WORLD_W-70||player.y<70||player.y>WORLD_H-70){player.loaderLoad=null;toast('💩 Hnůj vyvezen z mapy!');}else toast('Dojeď s nakladačem na kraj mapy a vysyp hnůj.');return;}if(L==='slama'||L==='seno'){bales.push({x:player.x,y:player.y,t:L});player.loaderLoad=null;toast('Balík '+(L==='seno'?'sena':'slámy')+' složen.');return;}}
@@ -742,8 +744,8 @@ function zmbHit(idx){var z=zmb.zombies[idx];zmb.killed++;zmb.zombies.splice(idx,
 function zmbEnd(win,now){zmb.done=true;zmb.endT=now;zmb.result=win?'win':'lose';}
 function zmbLoop(now){if(!zmbActive||!zmb)return;var dt=Math.min(50,now-zmbLast);zmbLast=now;
  if(zmb.cd>0){zmb.cd-=dt;if(zmb.cd<=0){zmb.cd=0;zmb.started=true;zmb.t0=now;}zmbDraw(now);zmbRAF=requestAnimationFrame(zmbLoop);return;}
- if(!zmb.done){var rot=0.052*dt/16;if(keys['a']||keys['arrowleft'])zmb.ang-=rot;if(keys['d']||keys['arrowright'])zmb.ang+=rot;
-  for(var i=0;i<zmb.zombies.length;i++){var z=zmb.zombies[i],dx=zmb.cx-z.x,dy=zmb.cy-z.y,d=Math.hypot(dx,dy)||1;z.ang=Math.atan2(dy,dx);if(d>z.reach){z.x+=dx/d*z.speed*dt;z.y+=dy/d*z.speed*dt;z.biting=false;}else{z.biting=true;z.biteT+=dt;if(z.biteT>=1000){z.biteT-=1000;zmb.life--;}}}
+ if(!zmb.done){var rot=0.052*dt/16;if(keys['a']||keys['arrowleft'])zmb.ang-=rot;if(keys['d']||keys['arrowright'])zmb.ang+=rot;if(keys[' ']&&(!zmb.fireT||now>=zmb.fireT)){zmbDown();zmb.fireT=now+260;}
+  for(var i=0;i<zmb.zombies.length;i++){var z=zmb.zombies[i],dx=zmb.cx-z.x,dy=zmb.cy-z.y,d=Math.hypot(dx,dy)||1;z.ang=Math.atan2(dy,dx);if(d>z.reach){z.x+=dx/d*z.speed*dt;z.y+=dy/d*z.speed*dt;z.biting=false;}else{z.biting=true;z.biteT+=dt;if(z.biteT>=1000){z.biteT-=1000;zmb.life--;zmb.biteMsg='Kousl tě kůň Z'+z.name+'!';zmb.biteMsgT=now+1300;}}}
   for(var ai=zmb.arrows.length-1;ai>=0;ai--){var ar=zmb.arrows[ai];ar.x+=ar.vx*dt;ar.y+=ar.vy*dt;ar.life-=dt;var hit=false;
    for(var zi=0;zi<zmb.zombies.length;zi++){var z2=zmb.zombies[zi];if(Math.hypot(ar.x-z2.x,ar.y-z2.y)<16*z2.size+6){zmbHit(zi);hit=true;break;}}
    if(hit||ar.life<=0||ar.x<-12||ar.x>zcv.width+12||ar.y<-12||ar.y>zcv.height+12)zmb.arrows.splice(ai,1);}
@@ -754,7 +756,7 @@ function zmbDraw(now){var c=zcx,W=zcv.width,H=zcv.height;
  c.fillStyle='#cfc9e6';c.beginPath();c.arc(W-50,46,20,0,6.3);c.fill();
  var _o=ctx,i;
  for(i=0;i<zmb.zombies.length;i++){var z=zmb.zombies[i];
-  var hh={x:0,y:0,size:z.size,body:z.body,mane:z.mane,shadeC:z.shadeC,phase:z.phase,bob:0.5,moving:true,ang:(z.ang||0),name:''};
+  var hh={x:0,y:0,size:z.size,body:z.body,mane:z.mane,shadeC:z.shadeC,phase:z.phase,bob:0.5,moving:true,ang:(z.ang||0),name:'Z'+z.name};
   c.save();c.translate(z.x,z.y);ctx=c;try{drawHorse(hh,now);}catch(e){}ctx=_o;c.restore();
   var dx=zmb.cx-z.x,dy=zmb.cy-z.y,d=Math.hypot(dx,dy)||1,hx=z.x+dx/d*22*z.size,hy=z.y+dy/d*22*z.size,px=-dy/d,py=dx/d;
   c.save();c.fillStyle='#ff2a2a';c.shadowColor='#ff0000';c.shadowBlur=9;c.beginPath();c.arc(hx+px*4*z.size,hy+py*4*z.size,2.6*z.size,0,6.3);c.arc(hx-px*4*z.size,hy-py*4*z.size,2.6*z.size,0,6.3);c.fill();c.restore();}
@@ -764,7 +766,7 @@ function zmbDraw(now){var c=zcx,W=zcv.width,H=zcv.height;
  c.save();c.translate(zmb.cx,zmb.cy);c.rotate(zmb.ang);c.strokeStyle='#6b3e1e';c.lineWidth=3;c.beginPath();c.arc(14,0,13,-1.4,1.4);c.stroke();c.strokeStyle='#eee';c.lineWidth=1;c.beginPath();c.moveTo(14+13*Math.cos(-1.4),13*Math.sin(-1.4));c.lineTo(14+13*Math.cos(1.4),13*Math.sin(1.4));c.stroke();c.restore();
  c.fillStyle='rgba(0,0,0,.5)';c.fillRect(10,10,170,16);c.fillStyle='#e44';c.fillRect(10,10,170*Math.max(0,zmb.life)/100,16);c.strokeStyle='#fff';c.lineWidth=1;c.strokeRect(10,10,170,16);
  c.fillStyle='#fff';c.font='bold 13px Trebuchet MS';c.textAlign='left';c.fillText('❤ '+Math.max(0,zmb.life),14,23);
- c.textAlign='right';c.fillText('Zabito: '+zmb.killed,W-12,22);if(zmb.started&&!zmb.done)c.fillText('Čas: '+Math.round((now-zmb.t0)/1000)+' s',W-12,40);c.textAlign='left';
+ c.textAlign='right';c.fillText('Zabito: '+zmb.killed,W-12,22);if(zmb.started&&!zmb.done)c.fillText('Čas: '+Math.round((now-zmb.t0)/1000)+' s',W-12,40);c.textAlign='left';if(zmb.biteMsg&&now<zmb.biteMsgT){c.fillStyle='#ff5555';c.font='bold 18px Trebuchet MS';c.textAlign='center';c.fillText(zmb.biteMsg,W/2,36);c.textAlign='left';}
  if(zmb.cd>0){var n=Math.max(0,Math.ceil(zmb.cd/800)-1);c.fillStyle='#fff';c.textAlign='center';c.font='bold 18px Trebuchet MS';c.fillText('Připrav se!',W/2,H*0.30);c.font='bold 72px Trebuchet MS';c.fillText(''+n,W/2,H/2+10);c.textAlign='left';}
  if(zmb.done){c.fillStyle='rgba(0,0,0,.62)';c.fillRect(0,0,W,H);c.fillStyle='#fff';c.textAlign='center';c.font='bold 30px Trebuchet MS';c.fillText(zmb.result==='win'?'🏆 Přežil jsi apokalypsu!':'💀 Sežrali tě!',W/2,H/2-14);c.font='bold 17px Trebuchet MS';c.fillText('Zabito koní: '+zmb.killed+'  ·  Čas: '+Math.round((zmb.endT-zmb.t0)/1000)+' s  ·  Životy: '+Math.max(0,zmb.life),W/2,H/2+22);c.textAlign='left';}}
 zcv.addEventListener('mousedown',function(e){var r=zcv.getBoundingClientRect();zmbMove((e.clientX-r.left)*zcv.width/r.width,(e.clientY-r.top)*zcv.height/r.height);zmbDown();});
@@ -772,7 +774,7 @@ zcv.addEventListener('mousemove',function(e){var r=zcv.getBoundingClientRect();z
 zcv.addEventListener('touchstart',function(e){e.preventDefault();var t=e.touches[0],r=zcv.getBoundingClientRect();zmbMove((t.clientX-r.left)*zcv.width/r.width,(t.clientY-r.top)*zcv.height/r.height);zmbDown();},{passive:false});
 zcv.addEventListener('touchmove',function(e){e.preventDefault();var t=e.touches[0],r=zcv.getBoundingClientRect();zmbMove((t.clientX-r.left)*zcv.width/r.width,(t.clientY-r.top)*zcv.height/r.height);},{passive:false});
 Array.prototype.forEach.call(document.querySelectorAll('#zmbChoose .dbtn'),function(b){b.onclick=function(){zmbStart(b.getAttribute('data-d'));zmbLast=performance.now();cancelAnimationFrame(zmbRAF);zmbRAF=requestAnimationFrame(zmbLoop);};});
-document.getElementById('zmbClose').onclick=function(){closeZmb();};
+document.getElementById('zmbClose').onclick=function(){closeZmb();};document.getElementById('zmbAgain').onclick=function(){zmbChoose(true);};
 /* ===== TRAIL (závod) — etapa 1 ===== */
 var TRAIL_ORDER=['start','slalom','brod','barely','dzban','bocak','byk','branka','lcouv','kelimek','mustek','cil'];
 var TRAIL_NAME={start:'Start',slalom:'Slalom',brod:'Brod',barely:'Tři barely',dzban:'Džbán',bocak:'Bočák',byk:'Garoča',branka:'Branka',lcouv:'Couvání do L',kelimek:'Kelímek',mustek:'Můstek',cil:'Cíl'};
