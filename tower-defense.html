@@ -1,30 +1,2446 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tower Defense — Placeholder</title>
-  <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 2rem; background: #fafafa; color: #111; }
-    .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
-    pre { background:#f3f4f6; padding:1rem; border-radius:6px; overflow:auto }
-    a.button { display:inline-block; margin-top:1rem; padding:0.6rem 1rem; background:#0366d6; color:#fff; text-decoration:none; border-radius:6px }
-  </style>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2326291f'/%3E%3Ctext x='32' y='47' font-size='42' text-anchor='middle'%3E%E2%9A%94%3C/text%3E%3C/svg%3E">
+<title>TD2026 — Souboj národů</title>
+<style>
+  :root{
+    --bg:#1a1c16; --panel:#26291f; --panel2:#313526; --gold:#d4b45a;
+    --text:#e8e2ce; --dim:#9a957f; --red:#c05040; --blue:#4a7fb5; --green:#6a9a4a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:Georgia,'Times New Roman',serif; user-select:none;}
+  #app{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#0d0f0a;}
+  #hud{position:absolute; top:8px; left:8px; z-index:5; display:flex; align-items:center; gap:12px;
+       padding:7px 12px; background:rgba(38,41,31,0.9); border:1px solid #000; border-radius:8px;
+       font-size:15px; flex-wrap:wrap; max-width:62vw;
+       transform:scale(var(--uis,1)); transform-origin:top left;}
+  #hud .title{font-weight:bold; color:var(--gold); font-size:17px; letter-spacing:1px;}
+  #hud .stat{background:var(--panel2); padding:3px 10px; border-radius:4px; border:1px solid #000;}
+  #hud .stat b{color:var(--gold);}
+  #timer{min-width:70px; text-align:center;}
+  #timer.low{color:#ff7a5c; font-weight:bold;}
+  #main{display:contents;}
+  #cwrap{display:contents;}
+  canvas#cv{background:#0d0f0a; cursor:default; display:block; touch-action:none;}
+  #zoomCtl{position:absolute; bottom:10px; left:10px; z-index:5; display:flex; gap:4px;
+           transform:scale(var(--uis,1)); transform-origin:bottom left;}
+  #zoomCtl button{width:34px; height:34px; font-size:17px; background:rgba(38,41,31,0.9);
+                  color:var(--text); border:1px solid var(--gold); border-radius:6px; cursor:pointer;}
+  #zoomCtl button:hover{background:#5d4a1f;}
+  #panel{position:absolute; top:8px; right:8px; z-index:5; width:250px; max-height:calc(100vh - 16px);
+         background:rgba(38,41,31,0.93); border:1px solid #000; border-radius:8px; padding:10px;
+         overflow-y:auto; display:flex; flex-direction:column; gap:8px;
+         transform:scale(var(--uis,1)); transform-origin:top right;}
+  .card{background:var(--panel2); border:1px solid #000; border-radius:5px; padding:7px 9px; cursor:pointer;}
+  .card:hover{border-color:var(--gold);}
+  .card.sel{border-color:var(--gold); box-shadow:0 0 6px rgba(212,180,90,.5);}
+  .card.dis{opacity:.42; cursor:not-allowed;}
+  .card .nm{font-weight:bold;}
+  .card .cost{float:right; color:var(--gold);}
+  .card .st{font-size:12px; color:var(--dim); margin-top:2px;}
+  .btn{background:#5d4a1f; color:var(--text); border:1px solid var(--gold); border-radius:5px;
+       padding:9px; font-family:inherit; font-size:15px; cursor:pointer; width:100%;}
+  .btn:hover{background:#7a6229;}
+  .ptabs{display:flex; gap:4px;}
+  .ptab{flex:1; text-align:center; padding:5px 2px; background:var(--panel2); border:1px solid #000;
+        border-radius:4px; cursor:pointer; font-size:13px;}
+  .ptab.sel{border-color:var(--gold); color:var(--gold);}
+  .qlist{font-size:12.5px; color:var(--dim); min-height:40px; background:#1e2018; border-radius:4px; padding:5px 7px;}
+  h3{color:var(--gold); font-size:14px; border-bottom:1px solid #444; padding-bottom:3px; margin-top:4px;}
+  .hint{font-size:12px; color:var(--dim); font-style:italic;}
+  #overlay{position:fixed; inset:0; background:rgba(8,9,6,.88); display:flex; align-items:center;
+           justify-content:center; z-index:10; overflow:auto;}
+  #overlay.hidden{display:none;}
+  .obox{background:var(--panel); border:2px solid var(--gold); border-radius:10px; padding:24px 32px;
+        max-width:720px; text-align:center; transform:scale(var(--uis,1)); transform-origin:center;}
+  .resrow{display:flex; gap:22px; justify-content:center; align-items:center; margin:10px 0 14px;}
+  .rescol{background:var(--panel2); border:1px solid #555; border-radius:8px; padding:10px 18px;}
+  .rescol.winner{border-color:var(--gold); box-shadow:0 0 10px rgba(212,180,90,.45);}
+  .resname{font-weight:bold; margin-top:4px;}
+  .respct{margin-top:4px; font-size:14px;}
+  .respct b{color:var(--gold);}
+  .resvs{font-size:26px; color:var(--gold);}
+  .toptbl{width:100%; border-collapse:collapse; font-size:12.5px; margin:6px 0 14px;}
+  .toptbl th{color:var(--gold); border-bottom:1px solid #555; padding:3px 5px; text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:0.5px;}
+  .toptbl td{border-bottom:1px solid #3a3d30; padding:3px 5px; text-align:left; white-space:nowrap;}
+  .toptbl .win{border:1.5px solid var(--gold); border-radius:4px; padding:0 4px; background:rgba(212,180,90,0.12);}
+  .toptbl canvas{vertical-align:middle; margin-right:3px;}
+  .nameinp{background:var(--panel2); color:var(--text); border:1px solid #555; border-radius:6px;
+           padding:8px; font-family:inherit; font-size:16px; width:200px; text-align:center; margin:4px;}
+  .nameinp.err{border-color:var(--red);}
+  .obox h1{color:var(--gold); font-size:26px; margin-bottom:6px; letter-spacing:1px;}
+  .obox h2{font-size:19px; margin-bottom:12px;}
+  .obox p{color:var(--dim); margin-bottom:14px; font-size:14.5px;}
+  .orow{display:flex; gap:8px; justify-content:center; margin-bottom:12px; flex-wrap:wrap;}
+  .opt{background:var(--panel2); border:1px solid #555; border-radius:6px; padding:8px 16px; cursor:pointer; font-size:14.5px;}
+  .opt.sel{border-color:var(--gold); color:var(--gold); box-shadow:0 0 5px rgba(212,180,90,.4);}
+  .olabel{font-size:13px; color:var(--dim); margin:10px 0 4px; text-transform:uppercase; letter-spacing:1px;}
+  .ogrid{display:grid; grid-template-columns:1fr; gap:0 26px;}
+  @media (orientation: landscape){ .ogrid{grid-template-columns:1fr 1fr;} }
+  .obox .btn{width:auto; padding:10px 34px; margin-top:8px;}
+  .ver{margin-top:12px; color:var(--dim); font-size:12px;}
+  .speedb{background:var(--panel2); border:1px solid #555; color:var(--text); border-radius:4px;
+          padding:3px 10px; cursor:pointer; font-family:inherit;}
+  .speedb.sel{border-color:var(--gold); color:var(--gold);}
+  .togIco{position:relative; font-size:18px; width:52px; height:38px; padding:0; font-weight:bold;
+          display:flex; align-items:center; justify-content:center;}
+  .pcopt{width:52px; height:38px; padding:0; display:flex; align-items:center; justify-content:center; font-size:18px;}
+  .togIco.ban{color:#ff5a4a; border-color:#ff5a4a;}
+  .togIco.ban::after{content:''; position:absolute; left:5px; right:5px; top:50%; height:2px;
+                     background:#ff5a4a; transform:rotate(-25deg); border-radius:2px;}
+  .civrow{display:flex; gap:10px; align-items:center; justify-content:center; margin-bottom:10px;}
+  .civrow canvas{flex:none;}
+  .csel{background:var(--panel2); color:var(--text); border:1px solid #555; border-radius:6px;
+        padding:7px; font-family:inherit; font-size:14.5px; width:auto;}
+  .csel:disabled{opacity:.55;}
+</style>
 </head>
 <body>
-  <main class="container">
-    <h1>Tower Defense — placeholder</h1>
-    <p>Tento soubor je pouze zástupce. Nahraď obsah tohoto souboru svým kompletním HTML/JS/CSS kódem hry pomocí commitu.</p>
+<div id="app">
+  <div id="hud">
+    <span class="title">⚔ TD2026</span>
+    <span class="stat" id="hudPhase">—</span>
+    <span class="stat" id="hudGold">Zlato: <b>—</b></span>
+    <span class="stat" id="timer">—</span>
+    <span class="stat" id="hudTc" style="display:none">Town Center: <b>—</b></span>
+    <span id="hudSpeed" style="display:none">
+      Rychlost: <button class="speedb sel" data-s="1">1×</button>
+      <button class="speedb" data-s="2">2×</button>
+      <button class="speedb" data-s="4">4×</button>
+    </span>
+  </div>
+  <div id="main">
+    <div id="cwrap"><canvas id="cv" width="990" height="600"></canvas></div>
+    <div id="panel"></div>
+  </div>
+  <div id="zoomCtl">
+    <button id="zin" title="Přiblížit (+, ctrl+kolečko, pinch)">＋</button>
+    <button id="zout" title="Oddálit (−)">−</button>
+    <button id="zreset" title="Celá mapa (0)">⌂</button>
+  </div>
+</div>
+<div id="overlay" class="hidden"></div>
 
-    <p>Tip: pokud chceš, pošli mi kompletní obsah souboru a já ho nahraju za tebe.</p>
+<script>
+'use strict';
+/* ============================================================
+   TD2026 — Souboj národů  (v0.8)
+   Hybrid Tower Defense inspirovaný Age of Empires II
+   © MondAI
+   ============================================================ */
+const VERSION='v0.16';
 
-    <p>Odkaz zpět na hlavní stránku:</p>
-    <p><a class="button" href="index.html">Zpět na Monda</a></p>
+/* ---------- Konstanty ---------- */
+const TW=44, TH=22, COLS=22, ROWS=22, OX=495, OY=48;
+const VIEW_W=990, VIEW_H=600;
+const DEF_BUDGET=1000, TC_HP=900;
+const TC={x:18,y:11};
+// Zlato útočníka: víc cest = víc souběžného tlaku → méně zlata.
+// Slévání povoleno = obránci pomáhá společný úsek → +50. Úplně oddělené cesty (zákaz obojího) → −50.
+function attBudget(){
+  const np=PATH_KEYS.length;
+  let b=({1:1550,2:1450,3:1350,4:1250})[np]||1400;
+  if(np>1&&S.cfg.allowMerge!==false) b+=50;
+  if(np>1&&S.cfg.allowMerge===false&&S.cfg.allowCross===false) b-=50;
+  return b;
+}
 
-    <hr />
-    <p>Aktuální cesta souboru: <code>/tower-defense.html</code></p>
-    <p>Po nahrání plného kódu bude stránka dostupná přes GitHub Pages na:<br>
-       <code>https://Bigmonda76.github.io/Monda/tower-defense.html</code></p>
-  </main>
+/* ============================================================
+   NÁRODY — jednotky, věže, prostředí, tábor, erb
+   Role jednotek: basic/ranged/elite/siege/leader
+   Role věží: watch/guard/unique/siege
+   ============================================================ */
+function U(name,cost,hp,speed,dps,range,pa,extra,desc){
+  return Object.assign({name,cost,hp,speed,dps,range,pa,desc},extra||{});
+}
+function T(name,cost,range,dmg,rate,kind,h,extra,desc){
+  return Object.assign({name,cost,range,dmg,rate,kind,h,desc},extra||{});
+}
+const CIVS={
+  brit:{
+    name:'Britové', col1:'#a32633', col2:'#3f5b7a',
+    towerCol:['#9a9484','#847e6e'],
+    camp:'tent',
+    units:{
+      basic: U('Zbrojnoš',50,90,1.5,10,0.7,1,null,'pěchota s mečem a štítem'),
+      ranged:U('Longbowman',70,50,1.5,8,3.4,0,null,'dlouhý luk — střílí zdaleka'),
+      elite: U('Rytíř',130,165,1.75,17,0.7,2,null,'těžká jízda, rychlý a obrněný'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Velitel',320,340,1.4,18,0.8,2,{aura:2},'praporec — léčí okolní muže')
+    },
+    towers:{
+      watch: T('Strážní věž',100,3.4,14,1.0,'arrow',30,null,'základní obrana'),
+      guard: T('Obranná věž',180,4.2,22,1.0,'arrow',38,null,'silnější šípy, delší dostřel'),
+      unique:T('Longbow věž',260,6.0,28,0.9,'arrow',46,null,'longbowmani — extrémní dostřel'),
+      siege: T('Mangonel',320,3.8,36,0.35,'siege',20,{splash:1.1},'plošné poškození, ignoruje brnění')
+    },
+    env:{grass:['#567d2e','#5d8533','#517729','#628b38'],hill:['#75974c','#7e9f53','#6f9147'],
+         path:['#9b7f52','#93784d','#a08557'],tree:'mixed',house:'cottage',animal:'sheep',
+         fields:true,flowers:true,tufts:true,snow:false,roof:'#8e3323',bush:'#2e5220',mounts:{n:2,type:'downs'}}
+  },
+  viking:{
+    name:'Vikingové', col1:'#7a2a1e', col2:'#3f6b2a',
+    towerCol:['#8a6f4a','#6e5636'],
+    camp:'boat',
+    units:{
+      basic: U('Sekerník',50,95,1.5,9,0.7,0,null,'pěchota se sekerou (+HP bonus)'),
+      ranged:U('Lučištník',70,55,1.5,7,2.6,0,null,'střílí na Town Center z dálky'),
+      elite: U('Berserk',130,175,1.4,16,0.7,1,{regen:3},'regeneruje 3 HP/s'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Jarl',320,360,1.3,18,0.8,2,{aura:2},'velitel — léčí okolní bojovníky')
+    },
+    towers:{
+      watch: T('Dřevěná hláska',100,3.4,15,1.0,'arrow',30,null,'srubová strážnice'),
+      guard: T('Kamenná věž',180,4.2,23,0.95,'arrow',38,null,'těžší střely'),
+      unique:T('Věž hersirů',260,5.4,31,0.85,'arrow',46,null,'elitní střelci severu'),
+      siege: T('Vrhač balvanů',320,3.8,38,0.33,'siege',20,{splash:1.1},'balvany drtí skupiny')
+    },
+    env:{grass:['#4e6b3f','#557245','#486540','#5c7a4a'],hill:['#647f52','#6d8757','#5f7a4d'],
+         path:['#8a7050','#82684a','#907756'],tree:'pine',house:'hut',animal:'sheep',
+         fields:false,flowers:false,tufts:true,snow:true,roof:'#5a4326',bush:'#2a4a20',mounts:{n:6,type:'alpine'}}
+  },
+  sarac:{
+    name:'Saracéni', col1:'#1e6b3a', col2:'#b8862a',
+    towerCol:['#c8b088','#a8926c'],
+    camp:'fort',
+    units:{
+      basic: U('Šermíř',50,85,1.65,10,0.7,0,null,'rychlá pěchota se šavlí'),
+      ranged:U('Velbloudí lučištník',70,60,1.7,7,2.5,0,null,'pohyblivý střelec'),
+      elite: U('Mamlúk',130,160,1.6,18,0.7,1,null,'elitní jezdec pouště'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Emír',320,330,1.5,17,0.8,2,{aura:2},'vůdce — léčí okolní bojovníky')
+    },
+    towers:{
+      watch: T('Hlídková věž',100,3.5,14,1.05,'arrow',30,null,'rychlá střelba'),
+      guard: T('Pouštní bašta',180,4.3,22,1.0,'arrow',38,null,'pevná pískovcová věž'),
+      unique:T('Věž lukostřelců',260,5.7,26,1.1,'arrow',46,null,'déšť šípů z výšky'),
+      siege: T('Onager',320,3.8,36,0.35,'siege',20,{splash:1.1},'plošné poškození')
+    },
+    env:{grass:['#c9ac6b','#c2a562','#d0b374','#bd9f5c'],hill:['#d4b87c','#cbb072','#c7aa6a'],
+         path:['#a3814e','#9a7846','#ab8956'],tree:'palm',house:'adobe',animal:'camel',
+         fields:true,flowers:false,tufts:false,snow:false,roof:'#b06a2a',bush:'#6a6a3a',mounts:{n:3,type:'mesa'}}
+  },
+  mongol:{
+    name:'Mongolové', col1:'#8a3e2a', col2:'#4a6a8a',
+    towerCol:['#9a8a6a','#7a6a4e'],
+    camp:'yurt',
+    units:{
+      basic: U('Nájezdník',50,80,1.85,9,0.7,0,null,'rychlý stepní bojovník'),
+      ranged:U('Jízdní lučištník',70,55,1.95,7,2.6,0,null,'nejrychlejší střelec'),
+      elite: U('Keshik',130,155,1.7,17,0.7,1,null,'chánova garda'),
+      siege: U('Beranidlo',220,330,0.9,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Chán',320,330,1.6,18,0.8,2,{aura:2},'vládce stepi — léčí okolní jezdce')
+    },
+    towers:{
+      watch: T('Hláska nomádů',100,3.4,13,1.15,'arrow',30,null,'rychlé šípy'),
+      guard: T('Opevněná jurta',180,4.0,21,1.1,'arrow',38,null,'palba ze všech stran'),
+      unique:T('Věž Mangudajů',260,5.2,22,1.35,'arrow',46,null,'vysoká kadence střelby'),
+      siege: T('Katapult',320,3.9,37,0.34,'siege',20,{splash:1.1},'plošné poškození')
+    },
+    env:{grass:['#a3914f','#998746','#ab9a58','#8f7d40'],hill:['#b3a15f','#a99754','#bbaa68'],
+         path:['#8a6f44','#816639','#93784d'],tree:'steppe',house:'yurt',animal:'horse',
+         fields:false,flowers:false,tufts:true,snow:false,roof:'#6a4a8a',bush:'#7a7a42',mounts:{n:4,type:'steppe'}}
+  },
+  frank:{
+    name:'Frankové', col1:'#2450a0', col2:'#7a3a8a',
+    towerCol:['#a8a294','#8e887a'],
+    camp:'tent',
+    units:{
+      basic: U('Zbrojnoš',50,95,1.5,10,0.7,1,null,'pěchota s mečem'),
+      ranged:U('Vrhač seker',70,60,1.5,9,2.2,0,null,'házené sekery na kratší vzdálenost'),
+      elite: U('Franský rytíř',130,170,1.8,17,0.7,2,null,'nejtěžší jízda západu'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Král',320,340,1.4,18,0.8,2,{aura:2},'korouhev — léčí okolní muže')
+    },
+    towers:{
+      watch: T('Strážní věž',100,3.4,14,1.0,'arrow',30,null,'základní obrana'),
+      guard: T('Kamenná věž',180,4.2,22,1.0,'arrow',38,null,'pevné zdivo'),
+      unique:T('Donjon',260,5.0,30,0.9,'arrow',46,null,'mohutná obytná věž'),
+      siege: T('Mangonel',320,3.8,36,0.35,'siege',20,{splash:1.1},'plošné poškození')
+    },
+    env:{grass:['#4f7a2c','#568232','#4a7328','#5d8a38'],hill:['#6d904a','#759851','#688b45'],
+         path:['#9b7f52','#93784d','#a08557'],tree:'mixed',house:'cottage',animal:'horse',
+         fields:true,flowers:true,tufts:true,snow:false,roof:'#4a5d8a',bush:'#2e5220',mounts:{n:2,type:'downs'}}
+  },
+  japan:{
+    name:'Japonci', col1:'#8a2a3a', col2:'#3a4a6a',
+    towerCol:['#b0a890','#968e76'],
+    camp:'tent',
+    units:{
+      basic: U('Ašigaru',50,85,1.6,10,0.7,0,null,'pěšák s kopím jari'),
+      ranged:U('Lučištník jumi',70,55,1.55,7,2.8,0,null,'dlouhý luk jumi'),
+      elite: U('Samuraj',130,165,1.55,19,0.7,1,null,'mistr katany'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Daimjó',320,330,1.5,18,0.8,2,{aura:2},'válečný pán — léčí okolní muže')
+    },
+    towers:{
+      watch: T('Strážnice',100,3.4,14,1.05,'arrow',30,null,'rychlá střelba'),
+      guard: T('Kamenná jagura',180,4.2,22,1.0,'arrow',38,null,'pevná věž'),
+      unique:T('Pagoda lučištníků',260,5.5,25,1.15,'arrow',46,null,'palba z pater pagody'),
+      siege: T('Obléhací vrhač',320,3.8,36,0.35,'siege',20,{splash:1.1},'plošné poškození')
+    },
+    env:{grass:['#5a8a3e','#628f45','#548438','#6a9a4e'],hill:['#75a055','#7da85e','#6f9a4f'],
+         path:['#9b8560','#93795a','#a08d68'],tree:'sakura',house:'pagoda',animal:'deer',
+         fields:true,flowers:true,tufts:true,snow:false,roof:'#8a2a3a',bush:'#2e5a28',mounts:{n:3,type:'alpine'}}
+  },
+  turk:{
+    name:'Turci', col1:'#a01818', col2:'#c8862a',
+    towerCol:['#c0aa80','#a08a64'],
+    camp:'fort',
+    units:{
+      basic: U('Azap',50,85,1.6,10,0.7,0,null,'lehká pěchota'),
+      ranged:U('Janičář',70,50,1.5,9,2.9,0,null,'ruční palná zbraň — daleko a tvrdě'),
+      elite: U('Sipáhí',130,160,1.75,17,0.7,1,null,'obrněný jezdec'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Sultán',320,330,1.5,18,0.8,2,{aura:2},'vládce — léčí okolní bojovníky')
+    },
+    towers:{
+      watch: T('Hlídková věž',100,3.4,14,1.0,'arrow',30,null,'základní obrana'),
+      guard: T('Kamenná bašta',180,4.2,22,1.0,'arrow',38,null,'pevné zdivo'),
+      unique:T('Věž janičářů',260,5.3,30,0.95,'arrow',46,null,'palba z mušket'),
+      siege: T('Bombarda',320,3.9,40,0.3,'siege',20,{splash:1.0},'dělová koule — drtivý zásah')
+    },
+    env:{grass:['#a89a58','#9e9050','#b0a260','#948646'],hill:['#b3a668','#a99c5e','#bbae70'],
+         path:['#94794c','#8b7044','#9d8254'],tree:'cypress',house:'adobe',animal:'camel',
+         fields:true,flowers:false,tufts:false,snow:false,roof:'#8a3a2a',bush:'#5a6a3a',mounts:{n:3,type:'steppe'}}
+  },
+  celt:{
+    name:'Keltové', col1:'#1e5c2a', col2:'#4a5d8a',
+    towerCol:['#8e8878','#746e60'],
+    camp:'fort',
+    units:{
+      basic: U('Horal',50,90,1.7,10,0.7,0,null,'rychlá pěchota vysočiny'),
+      ranged:U('Prakovník',70,55,1.6,7,2.4,0,null,'kameny z praku'),
+      elite: U('Pomalovaný nájezdník',130,160,1.85,16,0.7,1,null,'rychlý bojovník s modrými barvami'),
+      siege: U('Beranidlo',220,330,0.85,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Náčelník',320,330,1.6,18,0.8,2,{aura:2},'vůdce klanu — léčí okolní bojovníky')
+    },
+    towers:{
+      watch: T('Dřevěná hláska',100,3.4,14,1.0,'arrow',30,null,'základní obrana'),
+      guard: T('Kamenná věž',180,4.2,22,1.0,'arrow',38,null,'pevné zdivo'),
+      unique:T('Věž horalů',260,5.2,27,1.0,'arrow',46,null,'střelci vysočiny'),
+      siege: T('Trebuchet',320,4.2,38,0.3,'siege',20,{splash:1.1},'daleký vrh balvanů')
+    },
+    env:{grass:['#3f6b35','#46733b','#3a6430','#4d7a42'],hill:['#577f4a','#5f8751','#527944'],
+         path:['#8a7050','#82684a','#907756'],tree:'pine',house:'hut',animal:'sheep',
+         fields:false,flowers:false,tufts:true,snow:false,roof:'#5a6a4a',bush:'#6a4a7a',mounts:{n:4,type:'steppe'}}
+  },
+  czech:{
+    name:'Češi', col1:'#b02025', col2:'#4a5d8a',
+    towerCol:['#a09a8a','#867e6e'],
+    camp:'fort',
+    units:{
+      basic: U('Sudličník',50,92,1.5,10,0.7,1,null,'pěchota se sudlicí'),
+      ranged:U('Hákovnice',70,52,1.45,9,2.8,0,null,'ruční palná zbraň'),
+      elite: U('Boží bojovník',130,165,1.5,18,0.7,2,null,'husitský veterán s cepem'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Hejtman',320,335,1.45,18,0.8,2,{aura:2},'polní velitel — léčí okolní muže')
+    },
+    towers:{
+      watch: T('Strážní věž',100,3.4,14,1.0,'arrow',30,null,'základní obrana'),
+      guard: T('Kamenná bašta',180,4.2,22,1.0,'arrow',38,null,'pevné zdivo'),
+      unique:T('Vozová hradba',260,4.8,26,1.15,'arrow',34,null,'husitský vůz — rychlá palba'),
+      siege: T('Houfnice',320,3.9,40,0.3,'siege',20,{splash:1.0},'česká houfnice — drtivý zásah')
+    },
+    env:{grass:['#4d7a2f','#548235','#48722b','#5b8a3c'],hill:['#6d9448','#75a050','#688e43'],
+         path:['#9b7f52','#93784d','#a08557'],tree:'mixed',house:'cottage',animal:'sheep',
+         fields:true,flowers:true,tufts:true,snow:false,roof:'#8e3323',bush:'#2e5220',mounts:{n:3,type:'downs'}}
+  },
+  aztec:{
+    name:'Aztékové', col1:'#1e7a7a', col2:'#c8862a',
+    towerCol:['#9a9080','#7e7462'],
+    camp:'tent',
+    units:{
+      basic: U('Orlí bojovník',50,85,1.8,10,0.7,0,null,'rychlý bojovník v orlím rouchu'),
+      ranged:U('Vrhač atlatl',70,55,1.7,7,2.4,0,null,'oštěpy z vrhače'),
+      elite: U('Jaguáří válečník',130,160,1.7,18,0.7,1,null,'elitní bojovník v jaguáří kůži'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Tlatoani',320,330,1.55,18,0.8,2,{aura:2},'vládce — léčí okolní bojovníky')
+    },
+    towers:{
+      watch: T('Strážní plošina',100,3.4,14,1.05,'arrow',30,null,'základní obrana'),
+      guard: T('Kamenná terasa',180,4.2,22,1.0,'arrow',38,null,'pevné zdivo'),
+      unique:T('Chrámová pyramida',260,5.4,28,1.0,'arrow',46,null,'střelci z vrcholu pyramidy'),
+      siege: T('Vrhač kamenů',320,3.8,36,0.35,'siege',20,{splash:1.1},'plošné poškození')
+    },
+    env:{grass:['#2e6b2a','#357a30','#2a6226','#3d8536'],hill:['#4a8a42','#529448','#44803c'],
+         path:['#8a7a4e','#827148','#948256'],tree:'jungle',house:'pyramid',animal:'deer',
+         fields:true,flowers:true,tufts:true,snow:false,roof:'#7a6a4a',bush:'#1e5220',mounts:{n:2,type:'steppe'}}
+  },
+  teuton:{
+    name:'Teutoni', col1:'#2e2e2e', col2:'#8a8a8a',
+    towerCol:['#a8a294','#8e887a'],
+    camp:'fort',
+    units:{
+      basic: U('Řádový zbrojnoš',50,100,1.4,10,0.7,2,null,'těžce obrněná pěchota'),
+      ranged:U('Kušiník',70,55,1.4,8,2.7,0,null,'těžká kuše'),
+      elite: U('Teutonský rytíř',130,185,1.3,19,0.7,3,null,'pomalý, ale téměř nezničitelný'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Velmistr',320,340,1.35,18,0.8,2,{aura:2},'velmistr řádu — léčí okolní bratry')
+    },
+    towers:{
+      watch: T('Strážní věž',100,3.4,14,1.0,'arrow',30,null,'základní obrana'),
+      guard: T('Řádová věž',180,4.2,23,0.95,'arrow',38,null,'těžké střely'),
+      unique:T('Komturská věž',260,5.0,32,0.85,'arrow',46,null,'mohutná hradní věž'),
+      siege: T('Mangonel',320,3.8,36,0.35,'siege',20,{splash:1.1},'plošné poškození')
+    },
+    env:{grass:['#476b32','#4e7338','#42642e','#557a3f'],hill:['#5f8248','#678a50','#5a7c43'],
+         path:['#8f7550','#876c4a','#997e58'],tree:'mixed',house:'cottage',animal:'horse',
+         fields:true,flowers:false,tufts:true,snow:false,roof:'#4a4a52',bush:'#2a4a20',mounts:{n:2,type:'downs'}}
+  },
+  byz:{
+    name:'Byzantinci', col1:'#5a1a4a', col2:'#c8a02a',
+    towerCol:['#b8ac8e','#9c9074'],
+    camp:'tent',
+    units:{
+      basic: U('Skutatos',50,95,1.5,10,0.7,1,null,'pěchota s velkým štítem'),
+      ranged:U('Toxotes',70,55,1.5,7,2.7,0,null,'byzantský lučištník'),
+      elite: U('Kataphrakt',130,170,1.7,17,0.7,2,null,'obrněný jezdec východu'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Basileus',320,335,1.45,18,0.8,2,{aura:2},'císař — léčí okolní vojáky')
+    },
+    towers:{
+      watch: T('Strážní věž',100,3.4,14,1.0,'arrow',30,null,'základní obrana'),
+      guard: T('Theodosiánská věž',180,4.3,23,1.0,'arrow',38,null,'proslulé hradby Konstantinopole'),
+      unique:T('Věž řeckého ohně',260,4.6,26,0.6,'siege',44,{splash:0.9},'plamenná střela — plošný zásah'),
+      siege: T('Onager',320,3.8,36,0.35,'siege',20,{splash:1.1},'plošné poškození')
+    },
+    env:{grass:['#7a8a48','#82914e','#748442','#8a9954'],hill:['#94a25c','#9caa64','#8e9c56'],
+         path:['#9a8054','#92774e','#a2895c'],tree:'cypress',house:'adobe',animal:'sheep',
+         fields:true,flowers:false,tufts:true,snow:false,roof:'#b06a2a',bush:'#5a6a3a',mounts:{n:2,type:'steppe'}}
+  },
+  persia:{
+    name:'Peršané', col1:'#1a4a3a', col2:'#c8a02a',
+    towerCol:['#c0b088','#a4936c'],
+    camp:'tent',
+    units:{
+      basic: U('Kopiník',50,90,1.55,10,0.7,1,null,'pěchota s kopím a štítem'),
+      ranged:U('Perský lučištník',70,55,1.55,7,2.6,0,null,'střelec s reflexním lukem'),
+      elite: U('Válečný slon',130,220,1.0,22,0.7,2,null,'pomalý kolos — mohutné HP i útok'),
+      siege: U('Beranidlo',220,330,0.8,35,0.7,11,null,'odolné proti šípům, drtí budovy'),
+      leader:U('Šáh',320,335,1.5,18,0.8,2,{aura:2},'král králů — léčí okolní vojáky')
+    },
+    towers:{
+      watch: T('Hlídková věž',100,3.4,14,1.0,'arrow',30,null,'základní obrana'),
+      guard: T('Kamenná bašta',180,4.2,22,1.0,'arrow',38,null,'pevné zdivo'),
+      unique:T('Věž nesmrtelných',260,5.2,29,0.95,'arrow',46,null,'elitní gardové střelectvo'),
+      siege: T('Mangonel',320,3.8,36,0.35,'siege',20,{splash:1.1},'plošné poškození')
+    },
+    env:{grass:['#a09258','#968a50','#a89a60','#8c8046'],hill:['#aca066','#b2a86e','#a49a5e'],
+         path:['#94794c','#8b7044','#9d8254'],tree:'cypress',house:'adobe',animal:'camel',
+         fields:true,flowers:false,tufts:false,snow:false,roof:'#2a6a8a',bush:'#5a6a3a',mounts:{n:3,type:'steppe'}}
+  }
+};
+let UNITS={}, TOWERS={}, SEA=true; // aktivní sady dle zvolených národů
+
+/* ---------- Pomocné ---------- */
+function isoX(x,y){return (x-y)*TW/2+OX;}
+function isoY(x,y){return (x+y)*TH/2+OY;}
+function dist(ax,ay,bx,by){return Math.hypot(ax-bx,ay-by);}
+function rnd2(x,y,s){const h=Math.sin(x*127.1+y*311.7+(s||0)*74.7)*43758.5453;return h-Math.floor(h);}
+function clampY(v){return Math.max(1,Math.min(ROWS-2,v));}
+function terrainAt(x,y){
+  if(SEA){ if(x<=1) return 'water'; if(x<=3) return 'beach'; }
+  return 'grass';
+}
+let hillSet=new Set();
+function genHills(){
+  hillSet=new Set();
+  for(let x=17;x<=20;x++) for(let y=9;y<=13;y++) hillSet.add(x+','+y);
+  // 2–3 náhodné vyvýšené plošiny — věž na nich má +0,5 dostřelu
+  const nP=2+Math.floor(Math.random()*2);
+  let guard=0,placed=0;
+  while(placed<nP&&guard++<80){
+    const w=2+Math.floor(Math.random()*2), h=2+Math.floor(Math.random()*2);
+    const x0=5+Math.floor(Math.random()*(15-w)), y0=2+Math.floor(Math.random()*(17-h));
+    let ok=true;
+    for(let x=x0-1;x<=x0+w&&ok;x++) for(let y=y0-1;y<=y0+h&&ok;y++) if(hillSet.has(x+','+y)) ok=false;
+    if(!ok) continue;
+    for(let x=x0;x<x0+w;x++) for(let y=y0;y<y0+h;y++) hillSet.add(x+','+y);
+    placed++;
+  }
+}
+genHills();
+function raiseAt(x,y){return hillSet.has(x+','+y)?10:0;}
+function tileFromScreen(mx,my){
+  for(const r of [10,0]){
+    const fx=((mx-OX)/(TW/2)+(my+r-OY)/(TH/2))/2, fy=((my+r-OY)/(TH/2)-(mx-OX)/(TW/2))/2;
+    const x=Math.floor(fx), y=Math.floor(fy);
+    if(x>=0&&y>=0&&x<COLS&&y<ROWS&&raiseAt(x,y)===r) return [x,y];
+  }
+  return [-1,-1];
+}
+function expandPath(corners){
+  const out=[corners[0].slice()];
+  for(let i=1;i<corners.length;i++){
+    let [x,y]=out[out.length-1]; const [tx,ty]=corners[i];
+    while(x!==tx||y!==ty){ if(x!==tx) x+=Math.sign(tx-x); else y+=Math.sign(ty-y); out.push([x,y]); }
+  }
+  return out;
+}
+
+/* ---------- Stav hry ---------- */
+const S={
+  phase:'menu',
+  cfg:{time:0, attacker:'human', defender:'pc', first:'attacker', paths:0, sound:'off', allowCross:true, allowMerge:true,
+       attackerCiv:'random', defenderCiv:'random'},
+  attCiv:'viking', defCiv:'brit',
+  timeLeft:0, timerOn:false,
+  attackPlan:{}, budgetA:1400,
+  towers:[], budgetD:DEF_BUDGET,
+  selPath:'0', selTower:null, hover:[-1,-1],
+  speed:1, keepMap:false,
+  battle:null
+};
+let animT=0;
+
+/* ---------- Náhodně generovaná mapa ---------- */
+let PATHS={}, PATH_KEYS=[], PATH_NAMES={}, pathSet=new Set(),
+    TREES=[], treeSet=new Set(), DECOR=[], decorSet=new Set(),
+    ANIMALS=[], ROCKS=[], BUSHES=[], FLOWERS=[], FIELDS=[], MOUNTS=[], mountSet=new Set();
+let __lastViol=0;
+
+function resolveCivs(){
+  const keys=Object.keys(CIVS);
+  let a=S.cfg.attackerCiv||'random', d=S.cfg.defenderCiv||'random';
+  if(a==='random'){ const pool=keys.filter(k=>k!==d); a=pool[Math.floor(Math.random()*pool.length)]; }
+  if(d==='random'||d===a){ const pool=keys.filter(k=>k!==a); d=pool[Math.floor(Math.random()*pool.length)]; }
+  S.attCiv=a; S.defCiv=d;
+  UNITS=CIVS[a].units; TOWERS=CIVS[d].towers;
+  SEA=(a==='viking'); // Vikingové se vyloďují z moře, ostatní táboří na souši
+}
+function __plazaCount(){
+  let c=0;
+  for(let x=0;x<COLS-1;x++)for(let y=0;y<ROWS-1;y++){
+    if(pathSet.has(x+','+y)&&pathSet.has((x+1)+','+y)&&pathSet.has(x+','+(y+1))&&pathSet.has((x+1)+','+(y+1))) c++;
+  }
+  return c;
+}
+function __genPaths(){
+  const n=S.cfg.paths>0?S.cfg.paths:2+Math.floor(Math.random()*3);
+  const startRows=[3,6,9,12,15,18].sort(()=>Math.random()-0.5).slice(0,n).sort((a,b)=>a-b);
+  let sides;
+  if(S.cfg.allowCross===false){
+    // deterministické párování: horní řada→sever, dolní→jih, střední→západ/východ
+    sides=(n===1?['W']:n===2?['S','N']:n===3?['S','W','N']:['S','W','N','E']).slice();
+  } else {
+    sides=['N','S','W','E'].sort(()=>Math.random()-0.5);
+  }
+  PATHS={}; PATH_KEYS=[]; PATH_NAMES={};
+  const built=[];
+  const occ=new Set();
+  const occAdj=(tiles)=>{
+    let a=0;
+    for(const [x,y] of tiles){
+      if(occ.has(x+','+y)) continue;
+      if(occ.has((x+1)+','+y)||occ.has((x-1)+','+y)||occ.has(x+','+(y+1))||occ.has(x+','+(y-1))) a++;
+    }
+    return a;
+  };
+  __lastViol=0;
+  for(let i=0;i<n;i++){
+    const y0=startRows[i];
+    const side=sides.pop()||'W';
+    let best=null, bestAdj=1e9, bestShared=0;
+    const ATTEMPTS=S.cfg.allowCross===false?24:12;
+    for(let att=0;att<ATTEMPTS;att++){
+      if(S.cfg.allowMerge!==false && built.length && att<6 && Math.random()<0.45){
+        const ot=built[Math.floor(Math.random()*built.length)];
+        const idx=Math.floor(ot.length*0.3+Math.random()*ot.length*0.4);
+        const [mx,my]=ot[idx];
+        if(mx>=6){
+          const ex=5+Math.floor(Math.random()*(mx-5));
+          const con=expandPath([[3,y0],[ex,y0],[ex,my],[mx,my]]);
+          if(occAdj(con.slice(0,-1))<=1){ best=con.concat(ot.slice(idx+1)); bestAdj=0; break; }
+        }
+        continue;
+      }
+      const noCross=S.cfg.allowCross===false;
+      const x1=noCross?6+i:6+Math.floor(Math.random()*4);
+      const ym=noCross?clampY(y0+(Math.random()<0.5?-1:1)):clampY(y0+Math.floor(Math.random()*7)-3);
+      const x2=noCross?10+i:11+Math.floor(Math.random()*3);
+      let y2=clampY(Math.round((ym+11)/2)+Math.floor(Math.random()*5)-2);
+      const c=[[3,y0],[x1,y0],[x1,ym],[x2,ym]];
+      if(side==='N'){ y2=noCross?8:Math.min(y2,8); c.push([x2,y2],[18,y2],[18,10]); }
+      else if(side==='S'){ y2=noCross?Math.max(14,Math.min(19,ym)):Math.max(y2,14); c.push([x2,y2],[18,y2],[18,12]); }
+      else if(side==='E'){ y2=noCross?Math.max(2,Math.min(7,ym)):(y2===11?9:y2); c.push([x2,y2],[20,y2],[20,11],[19,11]); }
+      else { if(noCross)y2=11; c.push([x2,y2],[15,y2],[15,11],[17,11]); }
+      const tiles=expandPath(c);
+      const adj=occAdj(tiles);
+      const shared=S.cfg.allowCross===false ? tiles.reduce((s2,tt)=>s2+(occ.has(tt[0]+','+tt[1])?1:0),0) : 0;
+      const bad=adj+shared*10;
+      if(bad<bestAdj){ best=tiles; bestAdj=bad; bestShared=shared; }
+      if(bad===0) break;
+    }
+    __lastViol+=bestShared;
+    best.forEach(([x,y])=>occ.add(x+','+y));
+    const k=String(i);
+    PATHS[k]=best; PATH_KEYS.push(k); PATH_NAMES[k]='Cesta '+(i+1);
+    built.push(best);
+  }
+  pathSet=occ;
+}
+function generateMap(){
+  resolveCivs();
+  genHills();
+  for(let tryN=0;tryN<14;tryN++){ __genPaths(); if(__plazaCount()===0&&__lastViol===0) break; }
+  const env=CIVS[S.defCiv].env;
+  const dc=[[14,6],[13,17],[20,7],[20,16],[15,19],[12,3]].filter(([x,y])=>!pathSet.has(x+','+y)&&!hillSet.has(x+','+y));
+  DECOR=dc.sort(()=>Math.random()-0.5).slice(0,3);
+  decorSet=new Set(DECOR.map(([x,y])=>x+','+y));
+  const used=new Set([...pathSet,...decorSet,TC.x+','+TC.y]);
+  function pick(count,x0,x1,y0,y1,avoidHill){
+    const out=[]; let guard=0;
+    while(out.length<count&&guard++<300){
+      const x=x0+Math.floor(Math.random()*(x1-x0+1)), y=y0+Math.floor(Math.random()*(y1-y0+1));
+      const key=x+','+y;
+      if(used.has(key)||(avoidHill&&hillSet.has(key))||terrainAt(x,y)!=='grass'||x<5) continue;
+      used.add(key); out.push([x,y]);
+    }
+    return out;
+  }
+  MOUNTS=pick(env.mounts.n,6,21,1,20,true);
+  mountSet=new Set(MOUNTS.map(([x,y])=>x+','+y));
+  TREES=pick(18,5,21,1,20,true);
+  treeSet=new Set(TREES.map(([x,y])=>x+','+y));
+  ANIMALS=pick(3,6,14,3,18,true);
+  ROCKS=pick(6,5,21,1,20,false);
+  BUSHES=pick(7,5,21,1,20,true);
+  FLOWERS=env.flowers?pick(14,4,21,1,20,false):[];
+  FIELDS=env.fields?pick(2,6,14,4,17,true):[];
+  FIELDS.forEach(([x,y])=>decorSet.add(x+','+y));
+  buildTerrain();
+}
+
+/* ---------- DOM a HiDPI ---------- */
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const panel=document.getElementById('panel'), overlay=document.getElementById('overlay');
+const hudPhase=document.getElementById('hudPhase'), hudGold=document.getElementById('hudGold'),
+      hudTimer=document.getElementById('timer'), hudTc=document.getElementById('hudTc'),
+      hudSpeed=document.getElementById('hudSpeed');
+const terra=document.createElement('canvas');
+const tx2=terra.getContext('2d');
+let DPR=1, SC=1;
+const CAM={z:1,x:0,y:0}; // vlastní zoom mapy (1–2,5×) a posun
+function setupCanvas(){
+  DPR=Math.max(1,Math.min(4,window.devicePixelRatio||1));
+  const availW=Math.max(320,(window.innerWidth||VIEW_W)-16), availH=Math.max(240,(window.innerHeight||VIEW_H)-16);
+  const fit=Math.min(availW/VIEW_W, availH/VIEW_H);
+  cv.style.width=Math.round(VIEW_W*fit)+'px'; cv.style.height=Math.round(VIEW_H*fit)+'px';
+  SC=fit*DPR;
+  cv.width=Math.round(VIEW_W*SC); cv.height=Math.round(VIEW_H*SC);
+  ctx.setTransform(SC,0,0,SC,0,0);
+  terra.width=cv.width; terra.height=cv.height;
+  tx2.setTransform(SC,0,0,SC,0,0);
+  const uis=Math.max(0.5,Math.min(1,fit));
+  if(document.documentElement&&document.documentElement.style&&document.documentElement.style.setProperty)
+    document.documentElement.style.setProperty('--uis',uis.toFixed(3));
+  if(PATH_KEYS.length) buildTerrain();
+}
+window.addEventListener('resize',setupCanvas);
+document.querySelectorAll('.speedb').forEach(b=>b.onclick=()=>{
+  S.speed=+b.dataset.s;
+  document.querySelectorAll('.speedb').forEach(x=>x.classList.toggle('sel',x===b));
+});
+
+/* ============================================================
+   ZVUKY — Web Audio API, syntetizované, každý max ~1 s
+   ============================================================ */
+let AC=null, sndLast={};
+function sndOn(){ return S.cfg.sound==='on'; }
+function ac(){ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); return AC; }
+function thr(id,ms){ const t=performance.now(); if(sndLast[id]&&t-sndLast[id]<ms) return false; sndLast[id]=t; return true; }
+function tone(f,dur,type,vol,f2,delay){
+  if(!sndOn()) return;
+  const c=ac(), t0=c.currentTime+(delay||0);
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(f,t0);
+  if(f2) o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t0+dur);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(vol||0.15,t0+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g).connect(c.destination); o.start(t0); o.stop(t0+dur+0.03);
+}
+function noise(dur,vol,fc,q,delay,slideFc){
+  if(!sndOn()) return;
+  const c=ac(), t0=c.currentTime+(delay||0);
+  const len=Math.max(1,Math.floor(c.sampleRate*dur)), b=c.createBuffer(1,len,c.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+  const s=c.createBufferSource(); s.buffer=b;
+  const f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.setValueAtTime(fc||1000,t0);
+  if(slideFc) f.frequency.exponentialRampToValueAtTime(slideFc,t0+dur);
+  f.Q.value=q||1;
+  const g=c.createGain(); g.gain.setValueAtTime(vol||0.2,t0); g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  s.connect(f).connect(g).connect(c.destination); s.start(t0); s.stop(t0+dur);
+}
+const sfx={
+  anvil(){ if(!thr('an',70)) return; tone(2200+Math.random()*800,0.09,'triangle',0.1,900); noise(0.05,0.12,5000,2); },
+  forge(){ noise(0.5,0.08,600,0.7,0,300); tone(150,0.3,'sawtooth',0.03,80); },
+  menuClick(){ Math.random()<0.65?this.anvil():this.forge(); },
+  traffic(np){
+    if(np<=1){ for(let i=0;i<4;i++) noise(0.07,0.13,300,1.5,i*0.17); }
+    else if(np===2){ for(let i=0;i<7;i++) noise(0.05,0.13,350,1.5,i*0.09); }
+    else if(np===3){ for(let i=0;i<8;i++) noise(0.04,0.16,900,2,i*0.08+(i%2)*0.02); }
+    else { for(let i=0;i<8;i++) noise(0.04,0.14,900,2,i*0.09);
+           for(let i=0;i<5;i++) noise(0.06,0.09,180,1,i*0.14);
+           tone(90,0.8,'sawtooth',0.03,70); }
+  },
+  build(type){
+    if(type==='watch'){ for(let i=0;i<3;i++) noise(0.06,0.16,1200,2,i*0.18); }
+    else if(type==='guard'){ for(let i=0;i<3;i++){ tone(1800,0.05,'square',0.06,700,i*0.2); noise(0.05,0.12,3500,3,i*0.2); } }
+    else if(type==='unique'){ noise(0.35,0.1,800,1,0,2000); for(let i=0;i<2;i++) noise(0.06,0.15,1500,2,0.42+i*0.2); }
+    else { tone(70,0.6,'sawtooth',0.08,50); noise(0.5,0.1,250,1,0.05,120); }
+  },
+  coins(){ for(let i=0;i<6;i++) tone(3000+Math.random()*2500,0.06,'triangle',0.07,2200,i*0.07); },
+  place(role){
+    if(role==='basic'){ noise(0.15,0.2,700,2,0,300); tone(220,0.15,'sawtooth',0.08,120); }
+    else if(role==='ranged'){ tone(400,0.12,'triangle',0.09,600); noise(0.08,0.1,1200,2,0.05); }
+    else if(role==='elite'){ tone(120,0.5,'sawtooth',0.13,60); noise(0.4,0.16,400,1,0,150); }
+    else if(role==='siege'){ tone(60,0.5,'sawtooth',0.08,45); noise(0.45,0.13,180,1,0,90); }
+    else { tone(310,0.7,'sawtooth',0.1,210); tone(465,0.7,'sawtooth',0.06,315,0.02); }
+  },
+  spawn(role){ noise(0.25,0.12,SEA?500:350,0.8,0,150); this.place(role); },
+  shot(kind){ if(!thr('sh',90)) return; if(kind==='siege'){ tone(80,0.25,'sawtooth',0.09,40); noise(0.2,0.1,300,1); } else noise(0.09,0.1,2500,3,0,600); },
+  hit(){ if(!thr('hit',110)) return; noise(0.07,0.11,900,2,0,300); },
+  die(){ if(!thr('die',160)) return; tone(200,0.3,'sawtooth',0.09,60); noise(0.2,0.1,400,1,0.05,100); },
+  crackle(){ if(!thr('cr',120)) return; noise(0.15,0.09,1800,0.6,0,500); },
+  crumble(){ tone(60,0.9,'sawtooth',0.12,30); noise(0.9,0.18,200,0.8,0,80); noise(0.5,0.12,900,1,0.2,200); },
+  fanfare(){
+    const notes=[[392,0,0.12,0.09],[523,0.13,0.12,0.09],[659,0.26,0.12,0.09],[784,0.4,0.55,0.1],[523,0.4,0.55,0.05],[659,0.4,0.55,0.04]];
+    for(const [f,d,dur,v] of notes){ tone(f,dur,'sawtooth',v,0,d); tone(f*1.006,dur,'square',v*0.35,0,d); }
+    noise(0.08,0.05,3000,2,0.4);
+  }
+};
+
+/* ============================================================
+   ERBY národů — kreslené na mini canvas
+   ============================================================ */
+function drawErb(cnv,key){
+  if(!cnv) return;
+  const c=cnv.getContext('2d');
+  const es=(cnv.width||54)/54;
+  c.setTransform(es,0,0,es,0,0);
+  c.clearRect(0,0,54,62);
+  // tvar štítu
+  const shield=()=>{ c.beginPath(); c.moveTo(6,5); c.lineTo(48,5); c.lineTo(48,30);
+    c.quadraticCurveTo(48,48,27,58); c.quadraticCurveTo(6,48,6,30); c.closePath(); };
+  const fields={brit:'#9e1b32',viking:'#2c4a70',sarac:'#1e6b3a',mongol:'#7a2a1e',frank:'#2450a0',japan:'#e8e2d8',turk:'#a01818',celt:'#1e5c2a',czech:'#b02025',aztec:'#1e7a7a',teuton:'#f0ede0',byz:'#5a1a4a',persia:'#1a4a3a',random:'#4a4a42'};
+  shield(); c.fillStyle=fields[key]||fields.random; c.fill();
+  c.lineWidth=2.4; c.strokeStyle='#d4b45a'; c.stroke();
+  c.save(); shield(); c.clip();
+  if(key==='brit'){
+    // tři zlatí lvi
+    c.fillStyle='#e8c14a';
+    for(let i=0;i<3;i++){
+      const y=14+i*14;
+      c.beginPath(); c.ellipse(25,y,8,3.4,0,0,7); c.fill();          // tělo
+      c.beginPath(); c.arc(34,y-3,3,0,7); c.fill();                   // hlava
+      c.fillRect(19,y+2,2,4); c.fillRect(29,y+2,2,4);                 // nohy
+      c.beginPath(); c.moveTo(17,y-1); c.quadraticCurveTo(13,y-6,15,y-8); c.lineWidth=1.6; c.strokeStyle='#e8c14a'; c.stroke(); // ocas
+    }
+  } else if(key==='viking'){
+    // zkřížené sekery
+    c.strokeStyle='#c8b08a'; c.lineWidth=2.6;
+    c.beginPath(); c.moveTo(15,46); c.lineTo(39,15); c.moveTo(39,46); c.lineTo(15,15); c.stroke();
+    c.fillStyle='#c9ccd2';
+    c.beginPath(); c.arc(39,14,5.5,-2.4,0.8); c.lineTo(39,14); c.closePath(); c.fill();
+    c.beginPath(); c.arc(15,14,5.5,2.35,5.5); c.lineTo(15,14); c.closePath(); c.fill();
+    c.fillStyle='#d4b45a'; c.beginPath(); c.arc(27,32,4,0,7); c.fill();
+  } else if(key==='sarac'){
+    // půlměsíc a hvězda
+    c.fillStyle='#e8c14a';
+    c.beginPath(); c.arc(24,30,11,0,7); c.fill();
+    c.fillStyle=fields.sarac;
+    c.beginPath(); c.arc(29,28,10,0,7); c.fill();
+    c.fillStyle='#e8c14a';
+    const stx=35,sty=22;
+    c.beginPath();
+    for(let i=0;i<10;i++){
+      const r=i%2?2:5, a=-Math.PI/2+i*Math.PI/5;
+      c[i?'lineTo':'moveTo'](stx+Math.cos(a)*r,sty+Math.sin(a)*r);
+    }
+    c.closePath(); c.fill();
+  } else if(key==='mongol'){
+    // zlatý luk se šípem
+    c.strokeStyle='#e8c14a'; c.lineWidth=2.4;
+    c.beginPath(); c.moveTo(17,13); c.quadraticCurveTo(38,30,17,47); c.stroke(); // lučiště
+    c.lineWidth=1.2;
+    c.beginPath(); c.moveTo(17,13); c.lineTo(17,47); c.stroke();                 // tětiva
+    c.lineWidth=1.8;
+    c.beginPath(); c.moveTo(14,30); c.lineTo(38,30); c.stroke();                 // šíp
+    c.fillStyle='#e8c14a';
+    c.beginPath(); c.moveTo(42,30); c.lineTo(36,27); c.lineTo(36,33); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(14,30); c.lineTo(11,27); c.moveTo(14,30); c.lineTo(11,33); c.stroke();
+  } else if(key==='frank'){
+    // tři zlaté lilie na modré
+    const fields2={frank:'#2450a0'};
+    c.fillStyle='#e8c14a';
+    const lily=(lx,ly,s2)=>{
+      c.beginPath(); c.ellipse(lx,ly,2.2*s2,4.5*s2,0,0,7); c.fill();
+      c.beginPath(); c.ellipse(lx-3.4*s2,ly+1.5*s2,1.8*s2,3.4*s2,-0.6,0,7); c.fill();
+      c.beginPath(); c.ellipse(lx+3.4*s2,ly+1.5*s2,1.8*s2,3.4*s2,0.6,0,7); c.fill();
+      c.fillRect(lx-3.5*s2,ly+4*s2,7*s2,1.6*s2);
+    };
+    lily(27,15,1); lily(18,32,0.9); lily(36,32,0.9);
+  } else if(key==='japan'){
+    // rudé slunce na bílém
+    c.fillStyle='#c8102e';
+    c.beginPath(); c.arc(27,30,11,0,7); c.fill();
+  } else if(key==='turk'){
+    // bílý půlměsíc a hvězda na červené
+    c.fillStyle='#f0ede0';
+    c.beginPath(); c.arc(23,30,10,0,7); c.fill();
+    c.fillStyle='#a01818';
+    c.beginPath(); c.arc(27,28,9,0,7); c.fill();
+    c.fillStyle='#f0ede0';
+    const stx=33,sty=24;
+    c.beginPath();
+    for(let i=0;i<10;i++){
+      const r=i%2?1.8:4.5, a=-Math.PI/2+i*Math.PI/5;
+      c[i?'lineTo':'moveTo'](stx+Math.cos(a)*r,sty+Math.sin(a)*r);
+    }
+    c.closePath(); c.fill();
+  } else if(key==='celt'){
+    // zlatý keltský kříž
+    c.strokeStyle='#e8c14a'; c.lineWidth=3;
+    c.beginPath(); c.moveTo(27,12); c.lineTo(27,46); c.moveTo(15,26); c.lineTo(39,26); c.stroke();
+    c.lineWidth=2.4;
+    c.beginPath(); c.arc(27,26,7.5,0,7); c.stroke();
+  } else if(key==='czech'){
+    // stříbrný dvouocasý lev na červené
+    c.fillStyle='#f0ede0';
+    c.beginPath(); c.ellipse(26,32,9,5,-0.35,0,7); c.fill();
+    c.beginPath(); c.arc(35,24,4.4,0,7); c.fill();
+    c.fillRect(19,35,2.6,6); c.fillRect(30,34,2.6,6);
+    c.strokeStyle='#f0ede0'; c.lineWidth=2;
+    c.beginPath(); c.moveTo(18,29); c.quadraticCurveTo(12,24,14,17); c.stroke();
+    c.beginPath(); c.moveTo(19,31); c.quadraticCurveTo(11,29,12,22); c.stroke();
+    c.fillStyle='#e8c14a'; c.fillRect(32.6,18.4,5,2.2);
+  } else if(key==='aztec'){
+    // zlaté sluneční kolo
+    c.strokeStyle='#e8c14a'; c.lineWidth=2.4;
+    c.beginPath(); c.arc(27,29,9,0,7); c.stroke();
+    c.fillStyle='#e8c14a';
+    c.beginPath(); c.arc(27,29,4,0,7); c.fill();
+    for(let i=0;i<8;i++){
+      const a=i*Math.PI/4;
+      c.beginPath();
+      c.moveTo(27+Math.cos(a)*11,29+Math.sin(a)*11);
+      c.lineTo(27+Math.cos(a+0.22)*15,29+Math.sin(a+0.22)*15);
+      c.lineTo(27+Math.cos(a-0.22)*15,29+Math.sin(a-0.22)*15);
+      c.closePath(); c.fill();
+    }
+  } else if(key==='teuton'){
+    // černý kříž na bílém
+    c.fillStyle='#1e1e1e';
+    c.fillRect(23,12,8,34); c.fillRect(13,22,28,8);
+    c.strokeStyle='#e8c14a'; c.lineWidth=1.2;
+    c.strokeRect(23,12,8,34); c.strokeRect(13,22,28,8);
+  } else if(key==='byz'){
+    // zlatý dvouhlavý orel na purpuru
+    c.fillStyle='#e8c14a';
+    c.beginPath(); c.ellipse(27,32,6,8,0,0,7); c.fill();               // tělo
+    c.beginPath(); c.moveTo(21,28); c.lineTo(9,22); c.lineTo(20,33); c.closePath(); c.fill();  // křídlo L
+    c.beginPath(); c.moveTo(33,28); c.lineTo(45,22); c.lineTo(34,33); c.closePath(); c.fill(); // křídlo P
+    c.beginPath(); c.arc(23,21,3.2,0,7); c.fill();                     // hlava L
+    c.beginPath(); c.arc(31,21,3.2,0,7); c.fill();                     // hlava P
+    c.beginPath(); c.moveTo(24,42); c.lineTo(27,48); c.lineTo(30,42); c.closePath(); c.fill(); // ocas
+    c.fillRect(25.4,15.5,3.2,2.2);                                     // koruna
+  } else if(key==='persia'){
+    // zlaté okřídlené slunce
+    c.fillStyle='#e8c14a';
+    c.beginPath(); c.arc(27,26,5.5,0,7); c.fill();
+    c.beginPath(); c.moveTo(21,27); c.quadraticCurveTo(10,24,7,29); c.lineTo(20,32); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(33,27); c.quadraticCurveTo(44,24,47,29); c.lineTo(34,32); c.closePath(); c.fill();
+    c.strokeStyle='#e8c14a'; c.lineWidth=1.6;
+    c.beginPath(); c.moveTo(27,32); c.lineTo(27,42); c.moveTo(24,36); c.lineTo(27,40); c.moveTo(30,36); c.lineTo(27,40); c.stroke();
+  } else {
+    c.fillStyle='#d4b45a'; c.font='bold 28px Georgia'; c.textAlign='center';
+    c.fillText('?',27,41);
+  }
+  c.restore();
+}
+
+/* ============================================================
+   TOP10 — síň slávy (localStorage prohlížeče)
+   Bodování:
+   Útočník: %HP vojska ×10 + max(0,180−čas)×2
+   Obránce: %HP hradu ×10 + ušetřené zlato ÷2 + zabití ×10
+   Výhra proti člověku ×1,1. PC výhry se neukládají.
+   ============================================================ */
+function storageOk(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } }
+function loadTop(){
+  if(!storageOk()) return {att:[],def:[]};
+  try{ const d=JSON.parse(localStorage.getItem('td2026_top10')); return (d&&d.att&&d.def)?d:{att:[],def:[]}; }
+  catch(e){ return {att:[],def:[]}; }
+}
+function saveTop(d){ if(storageOk()) try{ localStorage.setItem('td2026_top10',JSON.stringify(d)); }catch(e){} }
+function qualifies(list,score){ return list.length<10||score>list[list.length-1].score; }
+function tsNow(){
+  const d=new Date(), p=v=>String(v).padStart(2,'0');
+  return String(d.getFullYear()).slice(2)+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes());
+}
+function calcScore(B,aWin,aPct,dPct,vsHuman){
+  const speed=Math.max(0,180-B.time);
+  let s=aWin ? aPct*10+speed*2 : dPct*10+S.budgetD/2+B.killed*10;
+  if(vsHuman) s*=1.1;
+  return Math.round(s);
+}
+function civNm(k){ return CIVS[k]?CIVS[k].name:k; }
+function topTableHtml(side,list){
+  let h='<h2 style="margin-top:8px">'+(side==='att'?'🗡 TOP10 — útočníci':'🏰 TOP10 — obránci')+'</h2>';
+  if(!list.length) return h+'<p class="hint">Zatím žádný zápis.</p>';
+  h+='<table class="toptbl"><tr><th>#</th><th>Jméno</th><th>Datum</th><th>Souboj</th><th>Vojsko/Hrad</th><th>Soupeř</th><th>Body</th></tr>';
+  list.forEach((e,i)=>{
+    const wa=e.winner==='att', ida=side+'_'+i+'_a', idd=side+'_'+i+'_d';
+    h+=`<tr><td>${i+1}</td><td><b>${e.name}</b></td><td>${e.ts}</td>
+      <td><span class="${wa?'win':''}"><canvas id="${ida}" width="18" height="21"></canvas>${civNm(e.attCiv)}</span>
+          ⚔ <span class="${wa?'':'win'}"><canvas id="${idd}" width="18" height="21"></canvas>${civNm(e.defCiv)}</span></td>
+      <td>${e.aPct} % / ${e.dPct} %</td><td>${e.vsHuman?'člověk':'PC'}</td><td><b>${e.score}</b></td></tr>`;
+  });
+  return h+'</table>';
+}
+function drawTopErbs(side,list){
+  list.forEach((e,i)=>{
+    drawErb(document.getElementById(side+'_'+i+'_a'),e.attCiv);
+    drawErb(document.getElementById(side+'_'+i+'_d'),e.defCiv);
+  });
+}
+function showTop10(backLabel,backFn){
+  const d=loadTop();
+  overlay.className=''; overlay.innerHTML=`
+    <div class="obox" style="max-width:760px">
+      <h1>🏆 Síň slávy</h1>
+      ${topTableHtml('att',d.att)}
+      ${topTableHtml('def',d.def)}
+      <p class="hint">Útočník: % vojska ×10 + rychlost ×2 · Obránce: % hradu ×10 + ušetřené zlato ÷2 + zabití ×10 · proti člověku ×1,1</p>
+      <button class="btn" id="topBack">${backLabel}</button>
+      <div class="ver">© MondAI · ${VERSION}</div>
+    </div>`;
+  drawTopErbs('att',d.att); drawTopErbs('def',d.def);
+  document.getElementById('topBack').onclick=backFn;
+}
+function saveScoreDialog(entry,afterFn){
+  overlay.className=''; overlay.innerHTML=`
+    <div class="obox">
+      <h1>🏆 Zápis do TOP10</h1>
+      <p>Zadej jméno vítěze (3–8 znaků) a pro potvrzení ho napiš dvakrát stejně.</p>
+      <div><input class="nameinp" id="nm1" maxlength="8" placeholder="Jméno"></div>
+      <div><input class="nameinp" id="nm2" maxlength="8" placeholder="Jméno znovu"></div>
+      <p class="hint" id="nmErr" style="min-height:18px"></p>
+      <button class="btn" id="nmSave">Uložit</button>
+      <button class="btn" id="nmBack" style="margin-left:8px">Zpět</button>
+    </div>`;
+  const n1=document.getElementById('nm1'), n2=document.getElementById('nm2'), err=document.getElementById('nmErr');
+  document.getElementById('nmSave').onclick=()=>{
+    const a=(n1.value||'').trim(), b=(n2.value||'').trim();
+    if(a.length<3||a.length>8){ err.textContent='Jméno musí mít 3–8 znaků.'; n1.className='nameinp err'; return; }
+    if(a!==b){ err.textContent='Jména se neshodují — napiš je dvakrát stejně.'; n2.className='nameinp err'; return; }
+    entry.name=a;
+    const d=loadTop(), key=entry.winner==='att'?'att':'def';
+    d[key].push(entry);
+    d[key].sort((x,y)=>y.score-x.score);
+    d[key]=d[key].slice(0,10);
+    saveTop(d);
+    if(S.battle) S.battle.saved=true;
+    sfx.fanfare();
+    afterFn();
+  };
+  document.getElementById('nmBack').onclick=afterFn;
+}
+
+/* ---------- Menu ---------- */
+function showMenu(){
+  S.phase='menu'; S.timerOn=false;
+  S.attackPlan={}; S.budgetA=1400;
+  S.towers=[]; S.budgetD=DEF_BUDGET; S.battle=null; S.selTower=null; S.speed=1;
+  panel.innerHTML='<h3>TD2026</h3><p class="hint">Souboj národů — útočník skládá vojsko, obránce staví věže. Prostředí mapy určuje domovina obránce.</p>';
+  const t=S.cfg;
+  const civOpts=(sel)=>'<option value="random">Náhodně</option>'+Object.keys(CIVS).map(k=>`<option value="${k}"${sel===k?' selected':''}>${CIVS[k].name}</option>`).join('');
+  overlay.className=''; overlay.innerHTML=`
+    <div class="obox">
+      <h1>⚔ TD2026</h1>
+      ${S.keepMap?'<p style="color:var(--gold)">Odveta na stejné mapě — národy zůstávají, role si můžete prohodit.</p>':''}
+      <div class="ogrid">
+      <div>
+      <div class="olabel">Útočník</div>
+      <div class="civrow">
+        <canvas id="erbAtt" width="54" height="62"></canvas>
+        <div style="flex:1">
+          <select id="selAtt" class="csel" ${S.keepMap?'disabled':''}>${civOpts(S.keepMap?S.attCiv:t.attackerCiv)}</select>
+          <div class="orow" id="mAtt" style="margin:6px 0 0">
+            <div class="opt pcopt" data-v="human" title="Člověk">👤</div><div class="opt pcopt" data-v="pc" title="Počítač">🖥</div>
+          </div>
+        </div>
+      </div>
+      </div>
+      <div>
+      <div class="olabel">Obránce (určuje prostředí)</div>
+      <div class="civrow">
+        <canvas id="erbDef" width="54" height="62"></canvas>
+        <div style="flex:1">
+          <select id="selDef" class="csel" ${S.keepMap?'disabled':''}>${civOpts(S.keepMap?S.defCiv:t.defenderCiv)}</select>
+          <div class="orow" id="mDef" style="margin:6px 0 0">
+            <div class="opt pcopt" data-v="human" title="Člověk">👤</div><div class="opt pcopt" data-v="pc" title="Počítač">🖥</div>
+          </div>
+        </div>
+      </div>
+      </div>
+      <div>
+      <div class="olabel">Tempo hry — čas na přípravu</div>
+      <div class="orow" id="mTime">
+        <div class="opt" data-v="60">1 min</div>
+        <div class="opt" data-v="120">2 min</div>
+        <div class="opt" data-v="180">3 min</div>
+        <div class="opt" data-v="0">∞</div>
+      </div>
+      </div>
+      <div>
+      <div class="olabel">Počet cest${S.keepMap?' (dáno mapou)':''}</div>
+      <div class="orow" id="mPaths">
+        <div class="opt" data-v="0">Náhodně</div>
+        <div class="opt" data-v="1">1</div>
+        <div class="opt" data-v="2">2</div>
+        <div class="opt" data-v="3">3</div>
+        <div class="opt" data-v="4">4</div>
+      </div>
+      </div>
+      <div>
+      <div class="olabel">Pravidla cest</div>
+      <div class="orow">
+        <div class="opt togIco" id="crossBtn"></div>
+        <div class="opt togIco" id="mergeBtn"></div>
+      </div>
+      </div>
+      <div>
+      <div class="olabel">Kdo začíná přípravu</div>
+      <div class="orow" id="mFirst">
+        <div class="opt" data-v="attacker">Útočník</div><div class="opt" data-v="defender">Obránce</div>
+      </div>
+      </div>
+      </div>
+      <div class="orow" style="margin-top:10px; align-items:stretch">
+        <div class="opt" id="sndBtn" title="Zvuk zapnout / vypnout" style="font-size:20px; padding:6px 16px; display:flex; align-items:center"></div>
+        <button class="btn" id="mStart" style="margin-top:0">⚔ Zahájit nájezd</button>
+        <button class="btn" id="mTop" style="margin-top:0">🏆 TOP10</button>
+      </div>
+      <div class="ver">© MondAI · ${VERSION}</div>
+    </div>`;
+  function wire(id,key,val){
+    const box=document.getElementById(id);
+    box.querySelectorAll('.opt').forEach(o=>{
+      o.classList.toggle('sel', o.dataset.v==String(val));
+      o.onclick=()=>{ S.cfg[key]= (key==='time'||key==='paths') ? +o.dataset.v : o.dataset.v;
+        box.querySelectorAll('.opt').forEach(x=>x.classList.toggle('sel',x===o));
+        if(key==='sound'){ if(o.dataset.v==='on'){ ac(); sfx.anvil(); } }
+        else if(key==='paths') sfx.traffic(+o.dataset.v||2);
+        else sfx.menuClick(); };
+    });
+  }
+  wire('mTime','time',t.time); wire('mAtt','attacker',t.attacker); wire('mDef','defender',t.defender);
+  wire('mFirst','first',t.first); wire('mPaths','paths',t.paths);
+  const sb=document.getElementById('sndBtn');
+  function sndIcon(){
+    const on=S.cfg.sound==='on';
+    sb.textContent=on?'🔊':'🔇';
+    sb.style.color=on?'#ff5a4a':'var(--dim)';
+    sb.style.borderColor=on?'#ff5a4a':'#555';
+  }
+  sb.onclick=()=>{ S.cfg.sound=(S.cfg.sound==='on')?'off':'on'; if(S.cfg.sound==='on'){ ac(); sfx.anvil(); } sndIcon(); };
+  sndIcon();
+  const cbt=document.getElementById('crossBtn'), mbt=document.getElementById('mergeBtn');
+  function togIcons(){
+    cbt.textContent='✚'; mbt.textContent='Y';
+    cbt.className='opt togIco'+(S.cfg.allowCross?'':' ban');
+    mbt.className='opt togIco'+(S.cfg.allowMerge?'':' ban');
+    cbt.title=S.cfg.allowCross?'Křížení cest povoleno — kliknutím zakážeš':'Křížení cest zakázáno — cesty se nikde nekříží';
+    mbt.title=S.cfg.allowMerge?'Slévání cest povoleno — kliknutím zakážeš':'Slévání cest zakázáno — každá cesta vede samostatně';
+  }
+  cbt.onclick=()=>{ S.cfg.allowCross=!S.cfg.allowCross; sfx.menuClick(); togIcons(); };
+  mbt.onclick=()=>{ S.cfg.allowMerge=!S.cfg.allowMerge; sfx.menuClick(); togIcons(); };
+  togIcons();
+  // národy: comboboxy + erby + vzájemné vyloučení
+  const sa=document.getElementById('selAtt'), sd=document.getElementById('selDef');
+  function syncCivUI(){
+    [...sa.options].forEach(o=>o.disabled=(o.value!=='random'&&o.value===sd.value));
+    [...sd.options].forEach(o=>o.disabled=(o.value!=='random'&&o.value===sa.value));
+    drawErb(document.getElementById('erbAtt'), S.keepMap?S.attCiv:sa.value);
+    drawErb(document.getElementById('erbDef'), S.keepMap?S.defCiv:sd.value);
+  }
+  sa.onchange=()=>{ S.cfg.attackerCiv=sa.value; syncCivUI(); sfx.menuClick(); };
+  sd.onchange=()=>{ S.cfg.defenderCiv=sd.value; syncCivUI(); sfx.menuClick(); };
+  syncCivUI();
+  document.getElementById('mStart').onclick=()=>{ sfx.fanfare(); startGame(); };
+  document.getElementById('mTop').onclick=()=>{ sfx.menuClick(); showTop10('Zpět do menu',()=>showMenu()); };
+  updateHud();
+}
+
+/* ---------- Překryvy fází ---------- */
+function phaseOverlay(title,sub,btn,cb){
+  overlay.className=''; overlay.innerHTML=`
+    <div class="obox"><h1>${title}</h1><p>${sub}</p><button class="btn" id="oBtn">${btn}</button></div>`;
+  document.getElementById('oBtn').onclick=()=>{overlay.className='hidden'; cb();};
+}
+function autoOverlay(title,sub,ms,cb){
+  overlay.className=''; overlay.innerHTML=`<div class="obox"><h1>${title}</h1><p>${sub}</p></div>`;
+  setTimeout(()=>{overlay.className='hidden'; cb();},ms);
+}
+function limitText(){ return S.cfg.time?('Limit: '+fmtT(S.cfg.time)+'.'):'Bez časového omezení.'; }
+function civBadge(civKey,role){
+  return `<div class="resrow" style="margin:0 0 10px">
+    <div class="rescol winner" style="padding:8px 22px">
+      <canvas id="erbPh" width="54" height="62"></canvas>
+      <div class="resname">${CIVS[civKey].name}</div>
+      <div class="hint" style="text-transform:uppercase; letter-spacing:1px">${role}</div>
+    </div>
+  </div>`;
+}
+function civOverlay(civKey,role,title,sub,btn,cb){
+  overlay.className=''; overlay.innerHTML=`
+    <div class="obox">${civBadge(civKey,role)}<h1>${title}</h1><p>${sub}</p><button class="btn" id="oBtn">${btn}</button></div>`;
+  drawErb(document.getElementById('erbPh'),civKey);
+  document.getElementById('oBtn').onclick=()=>{overlay.className='hidden'; cb();};
+}
+function civAutoOverlay(civKey,role,title,sub,ms,cb){
+  overlay.className=''; overlay.innerHTML=`
+    <div class="obox">${civBadge(civKey,role)}<h1>${title}</h1><p>${sub}</p></div>`;
+  drawErb(document.getElementById('erbPh'),civKey);
+  setTimeout(()=>{overlay.className='hidden'; cb();},ms);
+}
+
+/* ---------- Tok hry ---------- */
+function startGame(){
+  overlay.className='hidden';
+  if(S.keepMap){ S.keepMap=false; }
+  else generateMap();
+  S.attackPlan={}; PATH_KEYS.forEach(k=>S.attackPlan[k]=[]);
+  S.budgetA=attBudget(); S.towers=[]; S.budgetD=DEF_BUDGET; S.selPath=PATH_KEYS[0];
+  S.done={att:false,def:false}; S.lowNotice=false;
+  if(S.cfg.first==='defender') startPrepDefense(); else startPrepAttack();
+}
+function finishAttack(){
+  S.done.att=true; S.lowNotice=false;
+  if(S.done.def) startBattle(); else startPrepDefense();
+}
+function finishDefense(){
+  S.done.def=true; S.lowNotice=false;
+  if(S.done.att) startBattle(); else startPrepAttack();
+}
+function cheapest(obj){return Math.min(...Object.values(obj).map(o=>o.cost));}
+// při vyčerpání zlata se hra automaticky předá dál (druhému hráči, nebo rovnou do bitvy)
+function checkBudgetA(){
+  if(S.budgetA>=cheapest(UNITS)) return;
+  sfx.coins(); finishAttack();
+}
+function checkBudgetD(){
+  if(S.budgetD>=cheapest(TOWERS)) return;
+  sfx.coins(); finishDefense();
+}
+
+/* ---------- Fáze: příprava útoku ---------- */
+function startPrepAttack(){
+  S.phase='prepAttack'; S.timeLeft=S.cfg.time; S.timerOn=false;
+  const an=CIVS[S.attCiv].name;
+  if(S.cfg.attacker==='pc'){
+    civAutoOverlay(S.attCiv,'útočník — počítač','Počítač připravuje útok…','Vojevůdce národa '+an+' svolává vojsko.',1100,()=>{
+      S.attackPlan=aiAttackPlan(); S.budgetA=0; finishAttack();
+    });
+  } else {
+    civOverlay(S.attCiv,'útočník','Připrav vojsko','Vyber cestu ('+PATH_KEYS.length+') a nakupuj jednotky. Rozpis vojska sleduj vlevo na mapě. Obranu protivníka nevidíš. '+limitText(),'Začít přípravu',()=>{
+      S.timerOn=S.cfg.time>0; buildAttackPanel();
+    });
+  }
+  updateHud();
+}
+function buildAttackPanel(){
+  panel.innerHTML='<h3>'+CIVS[S.attCiv].name+' — cesta útoku</h3>';
+  const tabs=document.createElement('div'); tabs.className='ptabs';
+  for(const k of PATH_KEYS){
+    const d=document.createElement('div'); d.className='ptab'+(S.selPath===k?' sel':'');
+    d.textContent=(+k+1);
+    d.title=PATH_NAMES[k];
+    d.onclick=()=>{S.selPath=k; sfx.menuClick(); buildAttackPanel();};
+    tabs.appendChild(d);
+  }
+  panel.appendChild(tabs);
+  const undo=document.createElement('button'); undo.className='btn'; undo.style.padding='6px'; undo.style.fontSize='13px'; undo.style.background='var(--panel2)';
+  undo.textContent='↩ Odebrat poslední jednotku';
+  undo.onclick=()=>{ const arr=S.attackPlan[S.selPath]; if(arr.length){ S.budgetA+=UNITS[arr.pop()].cost; S.lowNotice=false; sfx.coins(); buildAttackPanel(); } };
+  panel.appendChild(undo);
+  const h=document.createElement('h3'); h.textContent='Jednotky (klik = přidat)'; panel.appendChild(h);
+  for(const k in UNITS){
+    const u=UNITS[k], c=document.createElement('div');
+    c.className='card'+(u.cost>S.budgetA?' dis':'');
+    c.innerHTML=`<span class="cost">${u.cost} 🪙</span><span class="nm">${u.name}</span>
+      <div class="st">HP ${u.hp} · síla ${u.dps} · rychlost ${u.speed} · ${u.desc}</div>`;
+    c.onclick=()=>{ if(u.cost<=S.budgetA){ S.budgetA-=u.cost; S.attackPlan[S.selPath].push(k); sfx.place(k); buildAttackPanel(); checkBudgetA(); } };
+    panel.appendChild(c);
+  }
+  const done=document.createElement('button'); done.className='btn'; done.textContent='✓ Vojsko připraveno';
+  done.onclick=finishAttack; panel.appendChild(done);
+  updateHud();
+}
+function aiAttackPlan(){
+  const plan={}; PATH_KEYS.forEach(k=>plan[k]=[]);
+  let b=attBudget(), leaders=0;
+  const pref=PATH_KEYS.slice().sort(()=>Math.random()-0.5).slice(0,Math.min(2,PATH_KEYS.length));
+  const w=['basic','basic','basic','ranged','ranged','elite','elite','siege','leader'];
+  let guard=0;
+  while(guard++<200){
+    const aff=w.filter(k=>UNITS[k].cost<=b && !(k==='leader'&&leaders>=2));
+    if(!aff.length) break;
+    const k=aff[Math.floor(Math.random()*aff.length)];
+    if(k==='leader') leaders++;
+    b-=UNITS[k].cost;
+    const pk=Math.random()<0.8?pref[Math.floor(Math.random()*pref.length)]:PATH_KEYS[Math.floor(Math.random()*PATH_KEYS.length)];
+    plan[pk].push(k);
+  }
+  return plan;
+}
+
+/* ---------- Fáze: příprava obrany ---------- */
+function startPrepDefense(){
+  S.phase='prepDefense'; S.timeLeft=S.cfg.time; S.timerOn=false; S.selTower=null;
+  const dn=CIVS[S.defCiv].name;
+  if(S.cfg.defender==='pc'){
+    civAutoOverlay(S.defCiv,'obránce — počítač','Počítač připravuje obranu…',dn+' osazují věže podél cest.',1100,()=>{
+      aiDefense(); finishDefense();
+    });
+  } else {
+    civOverlay(S.defCiv,'obránce','Připrav obranu','Nepřítel se blíží! Rozmísti věže podél cest k Town Center. Složení nepřátelského vojska nevidíš. '+limitText(),'Začít přípravu',()=>{
+      S.timerOn=S.cfg.time>0; buildDefensePanel();
+    });
+  }
+  updateHud();
+}
+function buildDefensePanel(){
+  panel.innerHTML='<h3>'+CIVS[S.defCiv].name+' — obranné stavby</h3>';
+  for(const k in TOWERS){
+    const t=TOWERS[k], c=document.createElement('div');
+    c.className='card'+(S.selTower===k?' sel':'')+(t.cost>S.budgetD?' dis':'');
+    c.innerHTML=`<span class="cost">${t.cost} 🪙</span><span class="nm">🏰 ${t.name}</span>
+      <div class="st">Dostřel ${t.range} · zásah ${t.dmg} · ${t.desc}</div>`;
+    c.onclick=()=>{ if(t.cost<=S.budgetD){ S.selTower=(S.selTower===k?null:k); buildDefensePanel(); } };
+    panel.appendChild(c);
+  }
+  const hint=document.createElement('p'); hint.className='hint';
+  hint.textContent='Vyber věž a klikni na volnou dlaždici (ne na cestu). Věž na návrší má +0,5 dostřelu. Pravý klik věž odstraní (vrátí zlato).';
+  panel.appendChild(hint);
+  const done=document.createElement('button'); done.className='btn'; done.textContent='✓ Obrana připravena';
+  done.onclick=finishDefense; panel.appendChild(done);
+  updateHud();
+}
+function canBuild(x,y){
+  if(x<4||y<0||x>=COLS||y>=ROWS) return false;
+  if(terrainAt(x,y)!=='grass') return false;
+  if(pathSet.has(x+','+y)||treeSet.has(x+','+y)||decorSet.has(x+','+y)||mountSet.has(x+','+y)) return false;
+  if(x===TC.x&&y===TC.y) return false;
+  if(S.towers.some(t=>t.x===x&&t.y===y)) return false;
+  return true;
+}
+function aiDefense(){
+  const cand=[];
+  for(let x=0;x<COLS;x++) for(let y=0;y<ROWS;y++){
+    if(!canBuild(x,y)) continue;
+    let near=false;
+    for(const key of PATH_KEYS){ for(const [px,py] of PATHS[key]){ if(Math.abs(px-x)<=2&&Math.abs(py-y)<=2){near=true;break;} } if(near)break; }
+    if(near) cand.push([x,y]);
+  }
+  const w=['watch','watch','guard','guard','unique','unique','siege'];
+  let guard=0;
+  while(guard++<100 && cand.length){
+    const aff=w.filter(k=>TOWERS[k].cost<=S.budgetD);
+    if(!aff.length) break;
+    const k=aff[Math.floor(Math.random()*aff.length)];
+    cand.sort((a,b)=>(Math.hypot(a[0]-TC.x,a[1]-TC.y))-(Math.hypot(b[0]-TC.x,b[1]-TC.y)));
+    const i=Math.random()<0.7?Math.floor(Math.random()*Math.min(10,cand.length)):Math.floor(Math.random()*cand.length);
+    const [x,y]=cand.splice(i,1)[0];
+    if(!canBuild(x,y)) continue;
+    S.towers.push({type:k,x,y,cd:0});
+    S.budgetD-=TOWERS[k].cost;
+  }
+}
+
+/* ---------- Fáze: bitva ---------- */
+function startBattle(){
+  overlay.className='hidden';
+  S.phase='battle'; S.timerOn=false; S.selTower=null;
+  const queues={};
+  let total=0;
+  let totalHp=0;
+  for(const k of PATH_KEYS){ queues[k]={list:(S.attackPlan[k]||[]).slice(), t:0.5}; total+=queues[k].list.length;
+    queues[k].list.forEach(u=>totalHp+=UNITS[u].hp); }
+  S.battle={units:[], shots:[], blasts:[], queues, tcHp:TC_HP, killed:0, total, totalHp, time:0};
+  S.towers.forEach(t=>t.cd=0);
+  panel.innerHTML='<h3>Bitva</h3><p class="hint">'+CIVS[S.attCiv].name+' '+(SEA?'se vyloďují':'vyrážejí z tábora')+'! Vydrží obrana národa '+CIVS[S.defCiv].name+'?</p>'+
+    '<div class="qlist" id="bstat"></div>';
+  hudSpeed.style.display=''; hudTc.style.display='';
+  updateHud();
+}
+function spawnUnit(pathKey,typeKey){
+  const p=PATHS[pathKey], u=UNITS[typeKey];
+  S.battle.units.push({type:typeKey, path:pathKey, wp:0, x:p[0][0], y:p[0][1],
+    hp:u.hp, max:u.hp, atk:false, ph:Math.random()*7});
+}
+function battleTick(dt){
+  const B=S.battle; if(!B) return;
+  B.time+=dt; B.burn=false;
+  for(const k of PATH_KEYS){
+    const q=B.queues[k];
+    if(q.list.length){ q.t-=dt; if(q.t<=0){ const ut=q.list.shift(); spawnUnit(k,ut); sfx.spawn(ut); q.t=1.25; } }
+  }
+  for(const u of B.units){
+    const d=UNITS[u.type];
+    if(d.regen) u.hp=Math.min(u.max,u.hp+d.regen*dt);
+    const dTc=dist(u.x,u.y,TC.x,TC.y);
+    if(dTc<=d.range+0.55){ u.atk=true; B.tcHp-=d.dps*dt; B.burn=true; }
+    else{
+      u.atk=false;
+      const p=PATHS[u.path];
+      if(u.wp<p.length-1){
+        const [tx,ty]=p[u.wp+1];
+        const dd=dist(u.x,u.y,tx,ty), step=d.speed*dt;
+        if(dd<=step){ u.x=tx; u.y=ty; u.wp++; }
+        else{ u.x+=(tx-u.x)/dd*step; u.y+=(ty-u.y)/dd*step; }
+      } else { u.atk=true; B.tcHp-=d.dps*dt; B.burn=true; }
+    }
+  }
+  for(const j of B.units){
+    if(UNITS[j.type].aura&&j.hp>0){
+      for(const u of B.units){ if(u!==j&&u.hp>0&&dist(u.x,u.y,j.x,j.y)<=2.5) u.hp=Math.min(u.max,u.hp+UNITS[j.type].aura*dt); }
+    }
+  }
+  for(const t of S.towers){
+    const d=TOWERS[t.type]; t.cd-=dt;
+    if(t.cd>0) continue;
+    const rng=d.range+(hillSet.has(t.x+','+t.y)?0.5:0);
+    let best=null,bd=1e9;
+    for(const u of B.units){ if(u.hp<=0) continue; const dd=dist(t.x,t.y,u.x,u.y); if(dd<=rng&&dd<bd){bd=dd;best=u;} }
+    if(best){
+      t.cd=1/d.rate;
+      sfx.shot(d.kind);
+      B.shots.push({x1:t.x,y1:t.y,h:d.h,x2:best.x,y2:best.y,t:0.28,dur:0.28,kind:d.kind});
+      if(d.kind==='siege'){
+        B.blasts.push({x:best.x,y:best.y,t:0.3,r:d.splash});
+        for(const u of B.units){ if(u.hp>0&&dist(u.x,u.y,best.x,best.y)<=d.splash) u.hp-=d.dmg; }
+        sfx.hit();
+      } else {
+        best.hp-=Math.max(1,d.dmg-UNITS[best.type].pa);
+        sfx.hit();
+      }
+    }
+  }
+  if(B.burn&&Math.random()<dt*2.5) sfx.crackle();
+  const before=B.units.length;
+  B.units=B.units.filter(u=>u.hp>0);
+  if(B.units.length<before) sfx.die();
+  B.killed+=before-B.units.length;
+  B.shots.forEach(s=>s.t-=dt); B.shots=B.shots.filter(s=>s.t>0);
+  B.blasts.forEach(b=>b.t-=dt); B.blasts=B.blasts.filter(b=>b.t>0);
+  if(B.tcHp<=0&&B.collapse===undefined){ B.tcHp=0; B.collapse=1.8; sfx.crumble(); }
+  if(B.collapse!==undefined){
+    B.tcHp=0; B.collapse-=dt;
+    if(Math.random()<dt*5) sfx.crackle();
+    if(B.collapse<=0){ endBattle('attacker'); return; }
+  }
+  const empty=PATH_KEYS.every(k=>!B.queues[k].list.length);
+  if(empty&&!B.units.length&&B.collapse===undefined) endBattle('defender');
+  const st=document.getElementById('bstat');
+  if(st) st.innerHTML=`Zabito útočníků: <b>${B.killed} / ${B.total}</b><br>Town Center: <b>${Math.ceil(B.tcHp)} / ${TC_HP}</b>`;
+}
+function endBattle(winner){
+  S.phase='result';
+  const B=S.battle;
+  const aWin=winner==='attacker';
+  const an=CIVS[S.attCiv].name, dn=CIVS[S.defCiv].name;
+  let remain=B.units.reduce((s,u)=>s+Math.max(0,u.hp),0);
+  for(const k of PATH_KEYS) B.queues[k].list.forEach(u=>remain+=UNITS[u].hp);
+  const aPct=B.totalHp?Math.round(remain/B.totalHp*100):0;
+  const dPct=Math.round(Math.max(0,B.tcHp)/TC_HP*100);
+  // TOP10: jen výhry člověka
+  const winnerHuman=aWin ? S.cfg.attacker==='human' : S.cfg.defender==='human';
+  const vsHuman=aWin ? S.cfg.defender==='human' : S.cfg.attacker==='human';
+  const score=calcScore(B,aWin,aPct,dPct,vsHuman);
+  const d10=loadTop();
+  const canSave=winnerHuman&&storageOk()&&!B.saved&&qualifies(aWin?d10.att:d10.def,score);
+  overlay.className=''; overlay.innerHTML=`
+    <div class="obox">
+      <h1>${aWin?'🔥 '+an+' zvítězili!':'🏰 '+dn+' ubránili!'}</h1>
+      <p>${aWin?'Town Center lehl popelem.':'Poslední útočník padl před hradbami.'}</p>
+      <div class="resrow">
+        <div class="rescol ${aWin?'winner':''}">
+          <canvas id="erbRA" width="54" height="62"></canvas>
+          <div class="resname">${an}</div>
+          <div class="hint">útočník</div>
+          <div class="respct">Vojsko: <b>${aPct} %</b> HP</div>
+        </div>
+        <div class="resvs">⚔</div>
+        <div class="rescol ${aWin?'':'winner'}">
+          <canvas id="erbRD" width="54" height="62"></canvas>
+          <div class="resname">${dn}</div>
+          <div class="hint">obránce</div>
+          <div class="respct">Hrad: <b>${dPct} %</b> HP</div>
+        </div>
+      </div>
+      <p>Zabito útočníků: ${B.killed} / ${B.total} · Délka bitvy: ${B.time.toFixed(0)} s · Body vítěze: <b style="color:var(--gold)">${score}</b></p>
+      ${canSave?'<button class="btn" id="oTop" style="margin-bottom:8px">🏆 Uložit vítězství do TOP10</button><br>':''}
+      <button class="btn" id="oAgain">Nová hra na nové mapě</button>
+      <button class="btn" id="oSame" style="margin-left:8px">Odveta na stejné mapě</button>
+      <button class="btn" id="oShow" style="margin-left:8px">🏆 TOP10</button>
+      <div class="ver">© MondAI · ${VERSION}</div>
+    </div>`;
+  drawErb(document.getElementById('erbRA'),S.attCiv);
+  drawErb(document.getElementById('erbRD'),S.defCiv);
+  const endMenu=(keep)=>{ hudSpeed.style.display='none'; hudTc.style.display='none'; S.keepMap=keep; showMenu(); };
+  document.getElementById('oAgain').onclick=()=>endMenu(false);
+  document.getElementById('oSame').onclick=()=>endMenu(true);
+  document.getElementById('oShow').onclick=()=>{ sfx.menuClick(); showTop10('Zpět na výsledek',()=>endBattle(winner)); };
+  if(canSave){
+    document.getElementById('oTop').onclick=()=>{
+      sfx.coins();
+      const entry={name:'', ts:tsNow(), attCiv:S.attCiv, defCiv:S.defCiv, winner:aWin?'att':'def',
+                   aPct, dPct, score, vsHuman};
+      saveScoreDialog(entry,()=>{ showTop10('Zpět na výsledek',()=>endBattle(winner)); });
+    };
+  }
+}
+
+/* ---------- HUD a časovač ---------- */
+function fmtT(s){ s=Math.max(0,Math.ceil(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function updateHud(){
+  const an=CIVS[S.attCiv]?CIVS[S.attCiv].name:'útočník', dn=CIVS[S.defCiv]?CIVS[S.defCiv].name:'obránce';
+  const ph={menu:'Menu', prepAttack:'Příprava útoku — '+an, prepDefense:'Příprava obrany — '+dn,
+            battle:'Bitva', result:'Konec'}[S.phase];
+  hudPhase.textContent=ph;
+  if(S.phase==='prepAttack') hudGold.innerHTML='Zlato: <b>'+S.budgetA+'</b>';
+  else if(S.phase==='prepDefense') hudGold.innerHTML='Zlato: <b>'+S.budgetD+'</b>';
+  else hudGold.innerHTML='Zlato: <b>—</b>';
+  const prep=(S.phase==='prepAttack'||S.phase==='prepDefense');
+  hudTimer.textContent=S.timerOn?fmtT(S.timeLeft):(prep&&S.cfg.time===0?'∞':'—');
+  hudTimer.className=(S.timerOn&&S.timeLeft<=15)?'low':'';
+  if(S.battle) hudTc.innerHTML='Town Center: <b>'+Math.ceil(S.battle.tcHp)+'</b>';
+}
+function tickTimer(dt){
+  if(!S.timerOn||S.cfg.time===0) return;
+  S.timeLeft-=dt;
+  if(S.timeLeft<=0){
+    S.timerOn=false;
+    if(S.phase==='prepAttack') finishAttack();
+    else if(S.phase==='prepDefense') finishDefense();
+  }
+}
+
+/* ---------- Kamera: zoom a posun ---------- */
+function clampCam(){
+  CAM.z=Math.max(1,Math.min(2.5,CAM.z));
+  CAM.x=Math.max(0,Math.min(VIEW_W-VIEW_W/CAM.z,CAM.x));
+  CAM.y=Math.max(0,Math.min(VIEW_H-VIEW_H/CAM.z,CAM.y));
+}
+function setZoom(z,wx,wy,mx,my){
+  CAM.z=z; clampCam();
+  if(wx!==undefined){ CAM.x=wx-mx/CAM.z; CAM.y=wy-my/CAM.z; clampCam(); }
+}
+function zoomCenter(f){
+  const wx=CAM.x+(VIEW_W/2)/CAM.z, wy=CAM.y+(VIEW_H/2)/CAM.z;
+  setZoom(CAM.z*f,wx,wy,VIEW_W/2,VIEW_H/2);
+}
+function screenToView(e){
+  const r=cv.getBoundingClientRect();
+  return [(e.clientX-r.left)*(VIEW_W/r.width),(e.clientY-r.top)*(VIEW_H/r.height)];
+}
+// kolečko i ctrl+kolečko (= pinch na precision touchpadu) → zoom mapy, browser zoom se neaktivuje
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const [mx,my]=screenToView(e);
+  const wx=CAM.x+mx/CAM.z, wy=CAM.y+my/CAM.z;
+  const f=Math.exp(-e.deltaY*(e.ctrlKey?0.01:0.0016));
+  setZoom(CAM.z*f,wx,wy,mx,my);
+},{passive:false});
+// dotykový pinch (touchscreen)
+let pinch=null;
+function tDist(e){return Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
+cv.addEventListener('touchstart',e=>{ if(e.touches.length===2){ e.preventDefault(); pinch={d:tDist(e),z:CAM.z}; } },{passive:false});
+cv.addEventListener('touchmove',e=>{
+  if(pinch&&e.touches.length===2){
+    e.preventDefault();
+    const r=cv.getBoundingClientRect();
+    const mx=((e.touches[0].clientX+e.touches[1].clientX)/2-r.left)*(VIEW_W/r.width);
+    const my=((e.touches[0].clientY+e.touches[1].clientY)/2-r.top)*(VIEW_H/r.height);
+    const wx=CAM.x+mx/CAM.z, wy=CAM.y+my/CAM.z;
+    setZoom(pinch.z*tDist(e)/pinch.d,wx,wy,mx,my);
+  }
+},{passive:false});
+cv.addEventListener('touchend',()=>{pinch=null;});
+// Safari gesta
+cv.addEventListener('gesturestart',e=>e.preventDefault());
+cv.addEventListener('gesturechange',e=>e.preventDefault());
+// posun: prostřední tlačítko myši + šipky
+let panDrag=null;
+cv.addEventListener('mousedown',e=>{ if(e.button===1&&CAM.z>1){ e.preventDefault(); panDrag={x:e.clientX,y:e.clientY,cx:CAM.x,cy:CAM.y}; } });
+window.addEventListener('mousemove',e=>{
+  if(panDrag){
+    const r=cv.getBoundingClientRect();
+    CAM.x=panDrag.cx-(e.clientX-panDrag.x)*(VIEW_W/r.width)/CAM.z;
+    CAM.y=panDrag.cy-(e.clientY-panDrag.y)*(VIEW_H/r.height)/CAM.z;
+    clampCam();
+  }
+});
+window.addEventListener('mouseup',()=>{panDrag=null;});
+window.addEventListener('keydown',e=>{
+  if(S.phase==='menu') return;
+  const st=30/CAM.z; let used=true;
+  if(e.key==='ArrowLeft')CAM.x-=st; else if(e.key==='ArrowRight')CAM.x+=st;
+  else if(e.key==='ArrowUp')CAM.y-=st; else if(e.key==='ArrowDown')CAM.y+=st;
+  else if(e.key==='+'||e.key==='=')zoomCenter(1.15); else if(e.key==='-')zoomCenter(1/1.15);
+  else if(e.key==='0'){CAM.z=1;CAM.x=0;CAM.y=0;} else used=false;
+  if(used){e.preventDefault();clampCam();}
+});
+document.getElementById('zin').onclick=()=>zoomCenter(1.25);
+document.getElementById('zout').onclick=()=>zoomCenter(1/1.25);
+document.getElementById('zreset').onclick=()=>{CAM.z=1;CAM.x=0;CAM.y=0;};
+// visual viewport (pinch-zoom prohlížeče, který nemění Lupu) → panely zůstanou ve viditelné oblasti
+function applyViewportUI(){
+  const vv=window.visualViewport; if(!vv) return;
+  const hudEl=document.getElementById('hud'), zc=document.getElementById('zoomCtl');
+  if(Math.abs(vv.scale-1)<0.03){
+    hudEl.style.cssText=''; panel.style.cssText=''; zc.style.cssText='';
+    return;
+  }
+  const u=Math.max(0.5,Math.min(1,(vv.width-16)/VIEW_W));
+  const s=Math.max(0.4,u/vv.scale);
+  hudEl.style.left=(vv.offsetLeft+6)+'px'; hudEl.style.top=(vv.offsetTop+6)+'px';
+  hudEl.style.transform='scale('+s+')'; hudEl.style.transformOrigin='top left';
+  panel.style.right='auto'; panel.style.left=(vv.offsetLeft+vv.width-6-250*s)+'px';
+  panel.style.top=(vv.offsetTop+6)+'px'; panel.style.maxHeight=(vv.height-12)/s+'px';
+  panel.style.transform='scale('+s+')'; panel.style.transformOrigin='top left';
+  zc.style.left=(vv.offsetLeft+6)+'px'; zc.style.bottom='auto';
+  zc.style.top=(vv.offsetTop+vv.height-6-34*s)+'px';
+  zc.style.transform='scale('+s+')'; zc.style.transformOrigin='top left';
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',applyViewportUI);
+  window.visualViewport.addEventListener('scroll',applyViewportUI);
+}
+
+/* ---------- Vstup ---------- */
+cv.addEventListener('mousemove',e=>{
+  const [mx,my]=screenToView(e);
+  S.hover=tileFromScreen(CAM.x+mx/CAM.z,CAM.y+my/CAM.z);
+});
+cv.addEventListener('click',e=>{
+  if(S.phase!=='prepDefense'||!S.selTower) return;
+  const [x,y]=S.hover;
+  if(canBuild(x,y)&&TOWERS[S.selTower].cost<=S.budgetD){
+    S.towers.push({type:S.selTower,x,y,cd:0});
+    S.budgetD-=TOWERS[S.selTower].cost;
+    sfx.build(S.towers[S.towers.length-1].type);
+    if(TOWERS[S.selTower].cost>S.budgetD) S.selTower=null;
+    buildDefensePanel();
+    checkBudgetD();
+  }
+});
+cv.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  if(S.phase!=='prepDefense') return;
+  const [x,y]=S.hover;
+  const i=S.towers.findIndex(t=>t.x===x&&t.y===y);
+  if(i>=0){ S.budgetD+=TOWERS[S.towers[i].type].cost; S.lowNotice=false; sfx.coins(); S.towers.splice(i,1); buildDefensePanel(); }
+});
+
+/* ============================================================
+   VYKRESLOVÁNÍ — izometrická grafika ve stylu AoE II
+   ============================================================ */
+function diamondPath(c,sx,sy){
+  c.beginPath();
+  c.moveTo(sx,sy); c.lineTo(sx+TW/2,sy+TH/2); c.lineTo(sx,sy+TH); c.lineTo(sx-TW/2,sy+TH/2);
+  c.closePath();
+}
+function drawDiamond(c,x,y,raise,fill,stroke){
+  const sx=isoX(x,y), sy=isoY(x,y)-raise;
+  diamondPath(c,sx,sy);
+  if(fill){c.fillStyle=fill; c.fill();}
+  if(stroke){c.strokeStyle=stroke; c.lineWidth=1; c.stroke();}
+}
+
+/* --- Předrenderovaný statický terén (dle prostředí obránce) --- */
+function buildTerrain(){
+  const env=CIVS[S.defCiv].env;
+  tx2.clearRect(0,0,VIEW_W,VIEW_H);
+  for(let s=0;s<=COLS+ROWS-2;s++){
+    for(let x=0;x<COLS;x++){
+      const y=s-x; if(y<0||y>=ROWS) continue;
+      const ter=terrainAt(x,y), key=x+','+y, raise=raiseAt(x,y);
+      const sx=isoX(x,y), sy=isoY(x,y)-raise;
+      const v=rnd2(x,y,1);
+      let base, spek1, spek2;
+      if(ter==='water'){ base=x===0?'#173f58':'#1f4f6d'; spek1='rgba(255,255,255,0.07)'; spek2='rgba(0,0,0,0.12)'; }
+      else if(ter==='beach'){
+        base=['#d3ba74','#cdb46e','#d8c07c'][Math.floor(v*3)];
+        spek1='rgba(120,95,45,0.35)'; spek2='rgba(255,240,190,0.4)';
+      }
+      else if(pathSet.has(key)){
+        base=env.path[Math.floor(v*env.path.length)];
+        spek1='rgba(70,52,28,0.4)'; spek2='rgba(200,175,120,0.4)';
+      }
+      else{
+        const g=hillSet.has(key)?env.hill:env.grass;
+        base=g[Math.floor(v*g.length)];
+        spek1='rgba(30,55,12,0.35)'; spek2='rgba(160,180,100,0.3)';
+      }
+      drawDiamond(tx2,x,y,raise,base,null);
+      tx2.save(); diamondPath(tx2,sx,sy); tx2.clip();
+      for(let i=0;i<10;i++){
+        const dx=(rnd2(x,y,i+2)-0.5)*TW*0.85, dy=(rnd2(x,y,i+9)-0.5)*TH*0.85;
+        tx2.fillStyle=i%2?spek1:spek2;
+        tx2.fillRect(sx+dx,sy+TH/2+dy,1.8,1.3);
+      }
+      if(ter==='beach'&&x===2){
+        tx2.fillStyle='rgba(120,100,60,0.3)';
+        tx2.beginPath(); tx2.moveTo(sx-TW/2,sy+TH/2); tx2.lineTo(sx-TW/6,sy+TH*0.17); tx2.lineTo(sx-TW/6,sy+TH*0.83); tx2.closePath(); tx2.fill();
+      }
+      if(SEA&&ter==='grass'&&x===4){
+        tx2.fillStyle='rgba(205,180,110,0.55)';
+        for(let i=0;i<6;i++){
+          const dx=-TW*0.22-rnd2(x,y,i+70)*TW*0.18, dy=(rnd2(x,y,i+80)-0.5)*TH*0.6;
+          tx2.fillRect(sx+dx,sy+TH/2+dy,2,1.4);
+        }
+      }
+      if(env.snow&&ter==='grass'&&!pathSet.has(key)&&rnd2(x,y,25)>0.72){
+        tx2.fillStyle='rgba(240,244,246,0.75)';
+        tx2.beginPath(); tx2.ellipse(sx+(rnd2(x,y,26)-0.5)*10,sy+TH/2+(rnd2(x,y,27)-0.5)*6,7,3.4,0,0,7); tx2.fill();
+      }
+      if(env.tufts&&ter==='grass'&&!pathSet.has(key)&&rnd2(x,y,20)>0.5){
+        tx2.strokeStyle='rgba(35,60,15,0.5)'; tx2.lineWidth=1;
+        const gx=sx+(rnd2(x,y,21)-0.5)*TW*0.5, gy=sy+TH/2+(rnd2(x,y,22)-0.5)*TH*0.5;
+        tx2.beginPath(); tx2.moveTo(gx,gy); tx2.lineTo(gx-2,gy-4);
+        tx2.moveTo(gx,gy); tx2.lineTo(gx,gy-5); tx2.moveTo(gx,gy); tx2.lineTo(gx+2,gy-4); tx2.stroke();
+      }
+      tx2.restore();
+      if(pathSet.has(key)){
+        drawDiamond(tx2,x,y,raise,null,'rgba(60,45,22,0.35)');
+      }
+      if(raise){
+        const isEdgeS=!hillSet.has(x+','+(y+1)), isEdgeE=!hillSet.has((x+1)+','+y);
+        if(isEdgeS){
+          tx2.fillStyle='rgba(0,0,0,0.22)';
+          tx2.beginPath();
+          tx2.moveTo(sx-TW/2,sy+TH/2); tx2.lineTo(sx,sy+TH); tx2.lineTo(sx,sy+TH+raise); tx2.lineTo(sx-TW/2,sy+TH/2+raise);
+          tx2.closePath(); tx2.fill();
+        }
+        if(isEdgeE){
+          tx2.fillStyle='rgba(0,0,0,0.32)';
+          tx2.beginPath();
+          tx2.moveTo(sx+TW/2,sy+TH/2); tx2.lineTo(sx,sy+TH); tx2.lineTo(sx,sy+TH+raise); tx2.lineTo(sx+TW/2,sy+TH/2+raise);
+          tx2.closePath(); tx2.fill();
+        }
+      }
+    }
+  }
+  // vyjeté koleje podél cest
+  for(const k of PATH_KEYS){
+    const p=PATHS[k];
+    tx2.strokeStyle='rgba(70,52,28,0.4)'; tx2.lineWidth=1.1;
+    for(let i=1;i<p.length;i++){
+      const [ax,ay]=p[i-1],[bx,by]=p[i];
+      const x1=isoX(ax,ay), y1=isoY(ax,ay)+TH/2-raiseAt(ax,ay);
+      const x2=isoX(bx,by), y2=isoY(bx,by)+TH/2-raiseAt(bx,by);
+      const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy)||1;
+      const ox=-dy/L*2.6, oy=dx/L*2.6;
+      tx2.beginPath(); tx2.moveTo(x1+ox,y1+oy); tx2.lineTo(x2+ox,y2+oy);
+      tx2.moveTo(x1-ox,y1-oy); tx2.lineTo(x2-ox,y2-oy); tx2.stroke();
+    }
+  }
+  // políčka
+  for(const [x,y] of FIELDS){
+    const sx=isoX(x,y), sy=isoY(x,y);
+    diamondPath(tx2,sx,sy); tx2.fillStyle='#a8894a'; tx2.fill();
+    tx2.save(); diamondPath(tx2,sx,sy); tx2.clip();
+    tx2.strokeStyle='rgba(96,66,28,0.55)'; tx2.lineWidth=1;
+    for(let i=-3;i<=3;i++){
+      tx2.beginPath(); tx2.moveTo(sx-TW/2+3,sy+TH/2+i*2.6); tx2.lineTo(sx+TW/2-3,sy+TH/2+i*2.6); tx2.stroke();
+    }
+    tx2.strokeStyle='rgba(222,192,106,0.85)';
+    for(let i=0;i<12;i++){
+      const fx=sx+(rnd2(x,y,90+i)-0.5)*TW*0.62, fy=sy+TH/2+(rnd2(x,y,100+i)-0.5)*TH*0.62;
+      tx2.beginPath(); tx2.moveTo(fx,fy); tx2.lineTo(fx,fy-3.4); tx2.stroke();
+    }
+    tx2.restore();
+    diamondPath(tx2,sx,sy); tx2.strokeStyle='rgba(90,67,38,0.6)'; tx2.lineWidth=1; tx2.stroke();
+  }
+  // ploty u stavení (jen kde se hodí)
+  if(env.house==='cottage'||env.house==='hut'){
+    for(const [x,y] of DECOR){
+      const sx=isoX(x,y), sy=isoY(x,y)+TH/2-raiseAt(x,y);
+      tx2.strokeStyle='#6a4f2e'; tx2.lineWidth=1.3;
+      for(let i=0;i<4;i++){
+        const fx=sx-14+i*9, fy=sy+8-(i%2);
+        tx2.beginPath(); tx2.moveTo(fx,fy); tx2.lineTo(fx,fy-5); tx2.stroke();
+      }
+      tx2.beginPath(); tx2.moveTo(sx-14,sy+5); tx2.lineTo(sx+13,sy+5); tx2.stroke();
+    }
+  }
+  // kameny s mechem
+  for(const [x,y] of ROCKS){
+    const sx=isoX(x,y)+(rnd2(x,y,30)-0.5)*10, sy=isoY(x,y)+TH/2;
+    tx2.fillStyle='rgba(0,0,0,0.2)'; tx2.beginPath(); tx2.ellipse(sx+1,sy+1,6,2.4,0,0,7); tx2.fill();
+    tx2.fillStyle='#8a877a'; tx2.beginPath(); tx2.ellipse(sx,sy-1.5,5,3.2,0,0,7); tx2.fill();
+    tx2.fillStyle='#a3a091'; tx2.beginPath(); tx2.ellipse(sx-1.5,sy-2.8,2.8,1.8,0,0,7); tx2.fill();
+    tx2.fillStyle='#75726a'; tx2.beginPath(); tx2.ellipse(sx+3.4,sy-0.6,2.2,1.5,0,0,7); tx2.fill();
+    if(!env.snow){ tx2.fillStyle='rgba(90,130,50,0.55)'; tx2.fillRect(sx-3,sy-3.4,2,1.4); tx2.fillRect(sx+1,sy-4,1.6,1.2); }
+    else { tx2.fillStyle='rgba(240,244,246,0.8)'; tx2.fillRect(sx-3,sy-4,4,1.6); }
+  }
+  // keře
+  for(const [x,y] of BUSHES){
+    const sx=isoX(x,y)+(rnd2(x,y,31)-0.5)*8, sy=isoY(x,y)+TH/2-raiseAt(x,y);
+    tx2.fillStyle='rgba(0,0,0,0.18)'; tx2.beginPath(); tx2.ellipse(sx+1,sy,6,2.2,0,0,7); tx2.fill();
+    tx2.fillStyle=env.bush; tx2.beginPath(); tx2.arc(sx-3,sy-3,4,0,7); tx2.arc(sx+3,sy-3,3.6,0,7); tx2.fill();
+    tx2.fillStyle='rgba(255,255,255,0.12)'; tx2.beginPath(); tx2.arc(sx-1,sy-5.5,2,0,7); tx2.fill();
+  }
+  // květiny
+  for(const [x,y] of FLOWERS){
+    for(let i=0;i<4;i++){
+      const fx=isoX(x,y)+(rnd2(x,y,40+i)-0.5)*TW*0.5, fy=isoY(x,y)+TH/2+(rnd2(x,y,50+i)-0.5)*TH*0.5;
+      tx2.fillStyle=['#e8e2ce','#e8d24a','#c05040','#b57edc'][Math.floor(rnd2(x,y,60+i)*4)];
+      tx2.fillRect(fx,fy,1.8,1.8);
+    }
+  }
+  // číselné popisky výchozích bodů
+  for(let i=0;i<PATH_KEYS.length;i++){
+    const [x,y]=PATHS[PATH_KEYS[i]][0];
+    const sx=isoX(x,y), sy=isoY(x,y)-6;
+    tx2.fillStyle='rgba(20,22,14,0.75)';
+    tx2.beginPath(); tx2.arc(sx,sy,7.5,0,7); tx2.fill();
+    tx2.strokeStyle='#d4b45a'; tx2.lineWidth=1.2; tx2.stroke();
+    tx2.fillStyle='#e8e2ce'; tx2.font='bold 10px Georgia'; tx2.textAlign='center';
+    tx2.fillText(String(i+1),sx,sy+3.5);
+  }
+}
+
+/* --- Dynamické prvky --- */
+function shadow(sx,sy,rx,ry){
+  ctx.fillStyle='rgba(0,0,0,0.25)';
+  ctx.beginPath(); ctx.ellipse(sx,sy,rx,ry,0,0,7); ctx.fill();
+}
+function drawWaves(){
+  if(!SEA) return;
+  ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1;
+  for(let y=0;y<ROWS;y+=2){
+    const ph=animT*1.2+y;
+    const sx=isoX(1.5,y)+Math.sin(ph)*3, sy=isoY(1.5,y)+TH/2;
+    ctx.beginPath(); ctx.moveTo(sx-7,sy); ctx.quadraticCurveTo(sx,sy-2.5,sx+7,sy); ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(255,255,255,0.45)';
+  for(let y=0;y<ROWS;y++){
+    const off=Math.sin(animT*2+y*1.7)*2;
+    const sx=isoX(2,y)+off, sy=isoY(2,y)+TH/2;
+    ctx.beginPath(); ctx.moveTo(sx-9,sy+2); ctx.quadraticCurveTo(sx-2,sy-1,sx+6,sy+1); ctx.stroke();
+  }
+  for(let i=0;i<12;i++){
+    const wx=rnd2(i,9,2)*1.6, wy=rnd2(i,3,5)*(ROWS-1);
+    const tw=Math.abs(Math.sin(animT*2.5+i*1.9));
+    ctx.fillStyle='rgba(255,255,255,'+(0.3*tw).toFixed(2)+')';
+    ctx.fillRect(isoX(wx,wy),isoY(wx,wy)+TH/2,1.6,1.6);
+  }
+}
+function drawClouds(){
+  ctx.fillStyle='rgba(15,25,10,0.08)';
+  for(let i=0;i<3;i++){
+    const cx1=((animT*7+i*430)%(VIEW_W+320))-160;
+    const cy1=110+i*170+Math.sin(animT*0.2+i)*20;
+    ctx.beginPath(); ctx.ellipse(cx1,cy1,95,38,0,0,7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx1+55,cy1+14,62,26,0,0,7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx1-50,cy1+10,50,22,0,0,7); ctx.fill();
+  }
+}
+function drawGulls(){
+  if(!SEA) return;
+  ctx.strokeStyle='rgba(240,240,235,0.85)'; ctx.lineWidth=1.2;
+  for(let i=0;i<3;i++){
+    const a=animT*0.35+i*2.2;
+    const cx0=isoX(0.6,4+i*7), cy0=isoY(0.6,4+i*7)-30;
+    const gx=cx0+Math.cos(a)*30, gy=cy0+Math.sin(a*1.4)*12;
+    const w=Math.sin(animT*7+i*2)*2.5;
+    ctx.beginPath();
+    ctx.moveTo(gx-4,gy); ctx.quadraticCurveTo(gx-2,gy-2.5-w,gx,gy);
+    ctx.quadraticCurveTo(gx+2,gy-2.5-w,gx+4,gy);
+    ctx.stroke();
+  }
+}
+function drawBoat(x,y){
+  const bob=Math.sin(animT*1.5+y)*1.5;
+  const sx=isoX(x,y), sy=isoY(x,y)+TH/2+bob;
+  shadow(sx,sy+3,16,4);
+  ctx.fillStyle='#5a3d22';
+  ctx.beginPath(); ctx.moveTo(sx-18,sy-2); ctx.quadraticCurveTo(sx,sy+8,sx+18,sy-2);
+  ctx.lineTo(sx+13,sy-6); ctx.lineTo(sx-13,sy-6); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#7a5a34'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(sx-15,sy-4); ctx.quadraticCurveTo(sx,sy+3,sx+15,sy-4); ctx.stroke();
+  ctx.strokeStyle='#5a3d22'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(sx+16,sy-4); ctx.quadraticCurveTo(sx+22,sy-10,sx+19,sy-14); ctx.stroke();
+  for(let i=-1;i<=1;i++){
+    ctx.fillStyle=i%2?'#a83a2a':'#d4b45a';
+    ctx.beginPath(); ctx.arc(sx+i*9,sy-5,3.4,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=0.8; ctx.stroke();
+  }
+  ctx.strokeStyle='#4a3018'; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.moveTo(sx,sy-6); ctx.lineTo(sx,sy-26); ctx.stroke();
+  for(let i=0;i<5;i++){
+    ctx.fillStyle=i%2?'#b8b0a0':'#a83a2a';
+    ctx.fillRect(sx-9,sy-25+i*3.2,18,3.2);
+  }
+}
+function drawTent(x,y,col){
+  const sx=isoX(x,y), sy=isoY(x,y)+TH/2;
+  shadow(sx+2,sy+1,13,4);
+  ctx.fillStyle='#ddd5be';
+  ctx.beginPath(); ctx.moveTo(sx-13,sy); ctx.lineTo(sx,sy-17); ctx.lineTo(sx+13,sy); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=col;
+  ctx.beginPath(); ctx.moveTo(sx-13,sy); ctx.lineTo(sx,sy-17); ctx.lineTo(sx-4,sy); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#3d3427';
+  ctx.beginPath(); ctx.moveTo(sx+2,sy); ctx.lineTo(sx+6,sy-7); ctx.lineTo(sx+10,sy); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#5a4326'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(sx,sy-17); ctx.lineTo(sx,sy-25); ctx.stroke();
+  const fl=Math.sin(animT*3+y)*1.6;
+  ctx.fillStyle=col;
+  ctx.beginPath(); ctx.moveTo(sx,sy-25); ctx.lineTo(sx+8,sy-23+fl); ctx.lineTo(sx,sy-20); ctx.closePath(); ctx.fill();
+}
+function drawFort(x,y,col){
+  const sx=isoX(x,y), sy=isoY(x,y)+TH/2;
+  shadow(sx+2,sy+1,15,4);
+  // palisáda ze zašpičatělých kůlů
+  ctx.fillStyle='#8a6a3e';
+  for(let i=0;i<6;i++){
+    const px=sx-14+i*5.5;
+    ctx.fillRect(px,sy-14,4,14);
+    ctx.beginPath(); ctx.moveTo(px,sy-14); ctx.lineTo(px+2,sy-18); ctx.lineTo(px+4,sy-14); ctx.closePath(); ctx.fill();
+  }
+  ctx.strokeStyle='#5a4326'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(sx-14,sy-8); ctx.lineTo(sx+16,sy-8); ctx.stroke();
+  drawTentSmall(sx+6,sy-14,col);
+}
+function drawTentSmall(sx,sy,col){
+  ctx.fillStyle='#ddd5be';
+  ctx.beginPath(); ctx.moveTo(sx-7,sy); ctx.lineTo(sx,sy-9); ctx.lineTo(sx+7,sy); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=col;
+  ctx.beginPath(); ctx.moveTo(sx-7,sy); ctx.lineTo(sx,sy-9); ctx.lineTo(sx-2,sy); ctx.closePath(); ctx.fill();
+}
+function drawYurt(x,y,flag){
+  const sx=isoX(x,y), sy=isoY(x,y)+TH/2-raiseAt(x,y);
+  shadow(sx+2,sy+1,12,4);
+  ctx.fillStyle='#e3dcc8';
+  ctx.beginPath(); ctx.ellipse(sx,sy-1,11,4.5,0,0,7); ctx.fill();
+  ctx.fillRect(sx-11,sy-10,22,9);
+  ctx.beginPath(); ctx.ellipse(sx,sy-10,11,4.5,0,0,7); ctx.fill();
+  ctx.fillStyle='#cfc5aa';
+  ctx.beginPath(); ctx.moveTo(sx-11,sy-10); ctx.quadraticCurveTo(sx,sy-20,sx+11,sy-10); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#a89468'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(sx-11,sy-6); ctx.lineTo(sx+11,sy-6); ctx.stroke();
+  ctx.fillStyle='#8a3e2a';
+  ctx.beginPath(); ctx.moveTo(sx-3,sy-1); ctx.lineTo(sx-3,sy-9); ctx.lineTo(sx+3,sy-9); ctx.lineTo(sx+3,sy-1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#6a5636'; ctx.beginPath(); ctx.ellipse(sx,sy-16,3,1.4,0,0,7); ctx.fill();
+  if(flag){
+    ctx.strokeStyle='#5a4326'; ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.moveTo(sx+11,sy-10); ctx.lineTo(sx+11,sy-22); ctx.stroke();
+    ctx.fillStyle='#8a3e2a';
+    ctx.beginPath(); ctx.moveTo(sx+11,sy-22); ctx.lineTo(sx+18,sy-20+Math.sin(animT*3)*1.5); ctx.lineTo(sx+11,sy-17); ctx.closePath(); ctx.fill();
+  }
+}
+function drawCamp(x,y){
+  const camp=CIVS[S.attCiv].camp, col=CIVS[S.attCiv].col1;
+  if(camp==='boat') drawBoat(x,y);
+  else if(camp==='tent') drawTent(x,y,col);
+  else if(camp==='fort') drawFort(x,y,col);
+  else drawYurt(x,y,true);
+}
+function drawTree(x,y){
+  const env=CIVS[S.defCiv].env;
+  const sx=isoX(x,y), sy=isoY(x,y)+TH/2-raiseAt(x,y);
+  const v=rnd2(x,y,70), sc=0.8+rnd2(x,y,71)*0.5;
+  shadow(sx+3*sc,sy,10*sc,3.5*sc);
+  const kind=env.tree==='mixed'?(v>0.42?'oak':'pine'):env.tree;
+  if(kind==='palm'){
+    ctx.strokeStyle='#8a6a3e'; ctx.lineWidth=2.6*sc;
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.quadraticCurveTo(sx+4*sc,sy-12*sc,sx+7*sc,sy-22*sc); ctx.stroke();
+    const tx=sx+7*sc, ty=sy-22*sc;
+    ctx.strokeStyle='#3d7320'; ctx.lineWidth=2*sc;
+    for(let i=0;i<5;i++){
+      const a=-0.5+i*0.55;
+      ctx.beginPath(); ctx.moveTo(tx,ty);
+      ctx.quadraticCurveTo(tx+Math.cos(a)*10*sc,ty+Math.sin(a)*4*sc-4*sc,tx+Math.cos(a)*15*sc,ty+Math.sin(a)*8*sc);
+      ctx.stroke();
+    }
+    ctx.fillStyle='#6a4a2a';
+    ctx.beginPath(); ctx.arc(tx-1,ty+2,1.6*sc,0,7); ctx.arc(tx+2,ty+2.5,1.6*sc,0,7); ctx.fill();
+  } else if(kind==='steppe'){
+    ctx.strokeStyle='#6a5636'; ctx.lineWidth=1.6*sc;
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx-1*sc,sy-9*sc); ctx.stroke();
+    ctx.fillStyle='#7a7a42';
+    ctx.beginPath(); ctx.ellipse(sx-1*sc,sy-12*sc,7*sc,4*sc,0,0,7); ctx.fill();
+    ctx.fillStyle='#8f8f50';
+    ctx.beginPath(); ctx.ellipse(sx-2*sc,sy-13.5*sc,4*sc,2.4*sc,0,0,7); ctx.fill();
+  } else if(kind==='jungle'){
+    ctx.fillStyle='#4a3520'; ctx.fillRect(sx-2*sc,sy-11*sc,4*sc,11*sc);
+    ctx.strokeStyle='#3d6a28'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(sx-1,sy-16*sc); ctx.quadraticCurveTo(sx-6*sc,sy-10*sc,sx-5*sc,sy-3*sc); ctx.stroke(); // liána
+    ctx.fillStyle='#1d3d10';
+    ctx.beginPath(); ctx.arc(sx-7*sc,sy-15*sc,8.5*sc,0,7); ctx.arc(sx+7*sc,sy-15*sc,8.5*sc,0,7); ctx.arc(sx,sy-24*sc,10*sc,0,7); ctx.fill();
+    ctx.fillStyle='#2a5518';
+    ctx.beginPath(); ctx.arc(sx-4*sc,sy-18*sc,7*sc,0,7); ctx.arc(sx+6*sc,sy-16*sc,6.5*sc,0,7); ctx.arc(sx-1*sc,sy-25*sc,7.5*sc,0,7); ctx.fill();
+    ctx.fillStyle='#3d7320';
+    ctx.beginPath(); ctx.arc(sx-2*sc,sy-21*sc,5*sc,0,7); ctx.arc(sx+3*sc,sy-26*sc,4.4*sc,0,7); ctx.fill();
+  } else if(kind==='sakura'){
+    ctx.fillStyle='#4a3520'; ctx.fillRect(sx-2*sc,sy-10*sc,4*sc,10*sc);
+    ctx.fillStyle='#b8688a';
+    ctx.beginPath(); ctx.arc(sx-6*sc,sy-14*sc,7.5*sc,0,7); ctx.arc(sx+6*sc,sy-14*sc,7.5*sc,0,7); ctx.arc(sx,sy-21*sc,8.5*sc,0,7); ctx.fill();
+    ctx.fillStyle='#d88aa8';
+    ctx.beginPath(); ctx.arc(sx-4*sc,sy-16*sc,6*sc,0,7); ctx.arc(sx+5*sc,sy-15*sc,5.5*sc,0,7); ctx.arc(sx-sc,sy-22*sc,6.5*sc,0,7); ctx.fill();
+    ctx.fillStyle='#f0b8cc';
+    ctx.beginPath(); ctx.arc(sx-3*sc,sy-19*sc,4*sc,0,7); ctx.arc(sx+2*sc,sy-23*sc,3.6*sc,0,7); ctx.fill();
+  } else if(kind==='cypress'){
+    ctx.fillStyle='#4a3520'; ctx.fillRect(sx-1.4*sc,sy-6*sc,2.8*sc,6*sc);
+    ctx.fillStyle='#2a4a22';
+    ctx.beginPath(); ctx.ellipse(sx,sy-19*sc,4.5*sc,14*sc,0,0,7); ctx.fill();
+    ctx.fillStyle='#365c2c';
+    ctx.beginPath(); ctx.ellipse(sx-1*sc,sy-21*sc,3*sc,11*sc,0,0,7); ctx.fill();
+  } else if(kind==='pine'){
+    ctx.fillStyle='#5a4326'; ctx.fillRect(sx-1.6*sc,sy-9*sc,3.2*sc,9*sc);
+    const greens=['#2a4f16','#33611b','#3d7320'];
+    for(let i=0;i<3;i++){
+      const base=sy-(7+i*6)*sc, w=(13-i*3.2)*sc, h=10*sc;
+      ctx.fillStyle=greens[i];
+      ctx.beginPath(); ctx.moveTo(sx,base-h); ctx.lineTo(sx+w,base); ctx.lineTo(sx-w,base); ctx.closePath(); ctx.fill();
+    }
+    if(CIVS[S.defCiv].env.snow){
+      ctx.strokeStyle='rgba(240,244,246,0.85)'; ctx.lineWidth=1.6*sc;
+      for(let i=0;i<3;i++){
+        const base=sy-(7+i*6)*sc, w=(11-i*3)*sc;
+        ctx.beginPath(); ctx.moveTo(sx-w,base-0.5); ctx.lineTo(sx,base-10*sc+2); ctx.stroke();
+      }
+    }
+  } else { // dub
+    ctx.fillStyle='#5a4326'; ctx.fillRect(sx-2*sc,sy-10*sc,4*sc,10*sc);
+    ctx.fillStyle='#4a3520'; ctx.fillRect(sx,sy-10*sc,2*sc,10*sc);
+    ctx.fillStyle='#274a14';
+    ctx.beginPath(); ctx.arc(sx-6*sc,sy-14*sc,8*sc,0,7); ctx.arc(sx+6*sc,sy-14*sc,8*sc,0,7); ctx.arc(sx,sy-22*sc,9*sc,0,7); ctx.fill();
+    ctx.fillStyle='#356118';
+    ctx.beginPath(); ctx.arc(sx-4*sc,sy-16*sc,6.5*sc,0,7); ctx.arc(sx+5*sc,sy-15*sc,6*sc,0,7); ctx.arc(sx-sc,sy-23*sc,7*sc,0,7); ctx.fill();
+    ctx.fillStyle='#46791f';
+    ctx.beginPath(); ctx.arc(sx-3*sc,sy-19*sc,4.5*sc,0,7); ctx.arc(sx+2*sc,sy-24*sc,4*sc,0,7); ctx.fill();
+  }
+}
+function drawMountain(x,y){
+  const type=CIVS[S.defCiv].env.mounts.type;
+  const sx=isoX(x,y), sy=isoY(x,y)+TH/2-raiseAt(x,y);
+  const v=rnd2(x,y,77), sc=0.85+v*0.4;
+  shadow(sx+5*sc,sy+1,16*sc,5*sc);
+  if(type==='alpine'){
+    // vysoké severské štíty se sněhem (Norsko — 2/3 země hornaté)
+    const peaks=[[-8,34],[6,42],[14,26]];
+    for(const [ox,hh] of peaks){
+      const px=sx+ox*sc, h=hh*sc, w=13*sc;
+      ctx.fillStyle='#6e6a60';
+      ctx.beginPath(); ctx.moveTo(px,sy-h); ctx.lineTo(px+w,sy); ctx.lineTo(px-w,sy); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#57544c';
+      ctx.beginPath(); ctx.moveTo(px,sy-h); ctx.lineTo(px+w,sy); ctx.lineTo(px,sy); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#eef2f4';
+      ctx.beginPath(); ctx.moveTo(px,sy-h); ctx.lineTo(px+w*0.34,sy-h*0.62); ctx.lineTo(px+w*0.1,sy-h*0.55);
+      ctx.lineTo(px-w*0.12,sy-h*0.64); ctx.lineTo(px-w*0.32,sy-h*0.6); ctx.closePath(); ctx.fill();
+    }
+  } else if(type==='mesa'){
+    // stolová hora / skalní plošina arabské pouště
+    const w=16*sc, h=22*sc, top=9*sc;
+    ctx.fillStyle='#c49a62';
+    ctx.beginPath(); ctx.moveTo(sx-top,sy-h); ctx.lineTo(sx+top,sy-h); ctx.lineTo(sx+w,sy); ctx.lineTo(sx-w,sy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#a87f4c';
+    ctx.beginPath(); ctx.moveTo(sx+top,sy-h); ctx.lineTo(sx+w,sy); ctx.lineTo(sx,sy); ctx.lineTo(sx,sy-h); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#d3ab72';
+    ctx.beginPath(); ctx.ellipse(sx,sy-h,top,top*0.34,0,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(120,80,40,0.55)'; ctx.lineWidth=1;
+    for(let i=1;i<4;i++){
+      const yy=sy-h+i*(h/4), ww=top+(w-top)*(i/4);
+      ctx.beginPath(); ctx.moveTo(sx-ww,yy); ctx.lineTo(sx+ww,yy); ctx.stroke();
+    }
+  } else if(type==='steppe'){
+    // altajské hřbety nad stepí
+    const peaks=[[-7,26],[7,32]];
+    for(const [ox,hh] of peaks){
+      const px=sx+ox*sc, h=hh*sc, w=14*sc;
+      ctx.fillStyle='#8a7a5e';
+      ctx.beginPath(); ctx.moveTo(px,sy-h); ctx.lineTo(px+w,sy); ctx.lineTo(px-w,sy); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#6e6049';
+      ctx.beginPath(); ctx.moveTo(px,sy-h); ctx.lineTo(px+w,sy); ctx.lineTo(px,sy); ctx.closePath(); ctx.fill();
+      if(hh>28){ ctx.fillStyle='#eef2f4';
+        ctx.beginPath(); ctx.moveTo(px,sy-h); ctx.lineTo(px+w*0.22,sy-h*0.72); ctx.lineTo(px-w*0.2,sy-h*0.7); ctx.closePath(); ctx.fill(); }
+    }
+  } else {
+    // anglické oblé pahorky (downs)
+    ctx.fillStyle='#6d9245';
+    ctx.beginPath(); ctx.ellipse(sx,sy-4*sc,17*sc,10*sc,0,Math.PI,0); ctx.fill();
+    ctx.fillStyle='#7da051';
+    ctx.beginPath(); ctx.ellipse(sx-3*sc,sy-6*sc,10*sc,6*sc,0,Math.PI,0); ctx.fill();
+    ctx.fillStyle='#8a877a';
+    ctx.beginPath(); ctx.ellipse(sx+7*sc,sy-3*sc,2.4,1.6,0,0,7); ctx.fill();
+    ctx.fillStyle='rgba(35,60,15,0.4)';
+    for(let i=0;i<4;i++) ctx.fillRect(sx-10+i*6,sy-5-(i%2)*3,1.6,3);
+  }
+}
+function drawAnimal(x,y){
+  const kind=CIVS[S.defCiv].env.animal;
+  const sx=isoX(x,y)+Math.sin(animT*0.4+x)*4, sy=isoY(x,y)+TH/2;
+  shadow(sx,sy,7,2.5);
+  if(kind==='camel'){
+    ctx.fillStyle='#c3a05e';
+    ctx.beginPath(); ctx.ellipse(sx,sy-5,8,3.6,0,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx-2,sy-9.5,2.6,0,7); ctx.arc(sx+3,sy-9,2.4,0,7); ctx.fill(); // hrby
+    ctx.strokeStyle='#c3a05e'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(sx+7,sy-6); ctx.quadraticCurveTo(sx+10,sy-10,sx+10,sy-12); ctx.stroke(); // krk
+    ctx.fillStyle='#b8934f'; ctx.fillRect(sx+8.6,sy-14.5,3.4,2.6); // hlava
+    ctx.strokeStyle='#a8854a'; ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.moveTo(sx-4,sy-2); ctx.lineTo(sx-4,sy+2); ctx.moveTo(sx+4,sy-2); ctx.lineTo(sx+4,sy+2); ctx.stroke();
+  } else if(kind==='horse'){
+    ctx.fillStyle='#7a5638';
+    ctx.beginPath(); ctx.ellipse(sx,sy-5.5,8,3.4,0,0,7); ctx.fill();
+    ctx.strokeStyle='#7a5638'; ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(sx+6,sy-7); ctx.quadraticCurveTo(sx+9,sy-11,sx+9,sy-13); ctx.stroke();
+    ctx.fillStyle='#6a482e'; ctx.fillRect(sx+7.6,sy-15,3.6,2.6);
+    ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(sx-4,sy-2.5); ctx.lineTo(sx-4,sy+2); ctx.moveTo(sx+4,sy-2.5); ctx.lineTo(sx+4,sy+2); ctx.stroke();
+    ctx.strokeStyle='#2e2318';
+    ctx.beginPath(); ctx.moveTo(sx-8,sy-6); ctx.quadraticCurveTo(sx-11,sy-4,sx-10,sy-1); ctx.stroke(); // ocas
+  } else if(kind==='deer'){
+    ctx.fillStyle='#8a6a42';
+    ctx.beginPath(); ctx.ellipse(sx,sy-6,7,3,0,0,7); ctx.fill();
+    ctx.strokeStyle='#8a6a42'; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(sx+5,sy-8); ctx.quadraticCurveTo(sx+8,sy-12,sx+8,sy-14); ctx.stroke();
+    ctx.fillStyle='#7a5c38'; ctx.fillRect(sx+6.6,sy-16,3,2.4);
+    ctx.strokeStyle='#5a4326'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(sx+7.4,sy-16); ctx.lineTo(sx+5.4,sy-20); ctx.moveTo(sx+7.4,sy-16); ctx.lineTo(sx+9.2,sy-20);
+    ctx.moveTo(sx+6,sy-18.6); ctx.lineTo(sx+4.6,sy-19.4); ctx.moveTo(sx+8.6,sy-18.6); ctx.lineTo(sx+10,sy-19.4); ctx.stroke();
+    ctx.strokeStyle='#6a4f2e'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(sx-4,sy-3.5); ctx.lineTo(sx-4,sy+1); ctx.moveTo(sx+4,sy-3.5); ctx.lineTo(sx+4,sy+1); ctx.stroke();
+  } else { // ovce
+    ctx.fillStyle='#ded8c4'; ctx.beginPath(); ctx.ellipse(sx,sy-5,7,4.5,0,0,7); ctx.fill();
+    ctx.fillStyle='#efe9d8'; ctx.beginPath(); ctx.ellipse(sx-1,sy-6.5,5,3,0,0,7); ctx.fill();
+    ctx.fillStyle='#3a342a'; ctx.fillRect(sx+5,sy-9,3.4,3);
+    ctx.fillRect(sx-3,sy-1,1.4,3); ctx.fillRect(sx+2,sy-1,1.4,3);
+  }
+}
+function drawHouse(x,y){
+  const kind=CIVS[S.defCiv].env.house;
+  const sx=isoX(x,y), sy=isoY(x,y)+TH/2-raiseAt(x,y);
+  if(kind==='yurt'){ drawYurt(x,y,false); return; }
+  shadow(sx+4,sy+1,15,5);
+  if(kind==='pyramid'){
+    // stupňovitá kamenná pyramida
+    ctx.fillStyle='#9a9080'; ctx.fillRect(sx-14,sy-6,28,5.5);
+    ctx.fillStyle='#a8a090'; ctx.fillRect(sx-10,sy-11,20,5);
+    ctx.fillStyle='#b6ae9e'; ctx.fillRect(sx-6.5,sy-16,13,5);
+    ctx.fillStyle='#8a2a3a'; ctx.fillRect(sx-3.4,sy-21,6.8,5);
+    ctx.strokeStyle='rgba(60,50,40,0.5)'; ctx.lineWidth=0.8;
+    ctx.strokeRect(sx-14,sy-6,28,5.5); ctx.strokeRect(sx-10,sy-11,20,5); ctx.strokeRect(sx-6.5,sy-16,13,5);
+    ctx.fillStyle='#3d3427'; ctx.fillRect(sx-1.6,sy-5,3.2,4.5); // schodiště/vchod
+    ctx.strokeStyle='#5a5248';
+    ctx.beginPath(); ctx.moveTo(sx-1.6,sy-6); ctx.lineTo(sx-1.6,sy-16); ctx.moveTo(sx+1.6,sy-6); ctx.lineTo(sx+1.6,sy-16); ctx.stroke();
+    return;
+  }
+  if(kind==='pagoda'){
+    // dvoupatrová pagoda
+    ctx.fillStyle='#e3dcc8'; ctx.fillRect(sx-10,sy-10,20,9);
+    ctx.strokeStyle='#5a4326'; ctx.lineWidth=1.2; ctx.strokeRect(sx-10,sy-10,20,9);
+    ctx.fillStyle='#3d3427'; ctx.fillRect(sx-2,sy-8,4,7);
+    ctx.fillStyle='#8a2a3a';
+    ctx.beginPath(); ctx.moveTo(sx-14,sy-10); ctx.quadraticCurveTo(sx,sy-16,sx+14,sy-10);
+    ctx.lineTo(sx+10,sy-13); ctx.lineTo(sx-10,sy-13); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#e3dcc8'; ctx.fillRect(sx-6.5,sy-19,13,6.5);
+    ctx.strokeRect(sx-6.5,sy-19,13,6.5);
+    ctx.fillStyle='#8a2a3a';
+    ctx.beginPath(); ctx.moveTo(sx-10,sy-19); ctx.quadraticCurveTo(sx,sy-25,sx+10,sy-19);
+    ctx.lineTo(sx+6,sy-21.5); ctx.lineTo(sx-6,sy-21.5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#d4b45a'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(sx,sy-24); ctx.lineTo(sx,sy-28); ctx.stroke();
+    return;
+  }
+  if(kind==='hut'){
+    // severský srub s drnovou střechou
+    ctx.fillStyle='#7a5f3a';
+    ctx.fillRect(sx-12,sy-11,24,10);
+    ctx.strokeStyle='rgba(60,42,22,0.7)'; ctx.lineWidth=1;
+    for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(sx-12,sy-11+i*2.6); ctx.lineTo(sx+12,sy-11+i*2.6); ctx.stroke(); }
+    ctx.fillStyle='#3d3427'; ctx.fillRect(sx-2,sy-8,4,7);
+    ctx.fillStyle='#557245';
+    ctx.beginPath(); ctx.moveTo(sx-15,sy-10); ctx.lineTo(sx,sy-19); ctx.lineTo(sx+15,sy-10); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#628050';
+    ctx.beginPath(); ctx.moveTo(sx-15,sy-10); ctx.lineTo(sx,sy-19); ctx.lineTo(sx,sy-10); ctx.closePath(); ctx.fill();
+    if(CIVS[S.defCiv].env.snow){
+      ctx.strokeStyle='rgba(240,244,246,0.9)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(sx-13,sy-11); ctx.lineTo(sx,sy-18.5); ctx.lineTo(sx+13,sy-11); ctx.stroke();
+    }
+  } else if(kind==='adobe'){
+    // pouštní hliněný dům s plochou střechou
+    ctx.fillStyle='#d3b382'; ctx.fillRect(sx-12,sy-14,24,13);
+    ctx.fillStyle='#c2a26e'; ctx.fillRect(sx,sy-14,12,13);
+    ctx.fillStyle='#b8965c'; ctx.fillRect(sx-13,sy-16,26,3);
+    ctx.fillStyle='#3d3427';
+    ctx.beginPath(); ctx.moveTo(sx-3,sy-1); ctx.lineTo(sx-3,sy-9); ctx.arc(sx,sy-9,3,Math.PI,0); ctx.lineTo(sx+3,sy-1); ctx.closePath(); ctx.fill();
+    ctx.fillRect(sx-9,sy-11,3,3); ctx.fillRect(sx+6,sy-11,3,3);
+    ctx.strokeStyle='#8a6a3e'; ctx.lineWidth=1;
+    for(let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(sx-10+i*7,sy-16); ctx.lineTo(sx-10+i*7,sy-17.6); ctx.stroke(); }
+  } else {
+    // anglická hrázděná chalupa
+    ctx.fillStyle='#d8cba8'; ctx.fillRect(sx-12,sy-13,24,12);
+    ctx.strokeStyle='#5a4326'; ctx.lineWidth=1.4;
+    ctx.strokeRect(sx-12,sy-13,24,12);
+    ctx.beginPath();
+    ctx.moveTo(sx-4,sy-13); ctx.lineTo(sx-4,sy-1);
+    ctx.moveTo(sx+4,sy-13); ctx.lineTo(sx+4,sy-1);
+    ctx.stroke();
+    ctx.fillStyle='#3d3427'; ctx.fillRect(sx-2,sy-8,4,7);
+    ctx.fillRect(sx+7,sy-10,4,4);
+    ctx.fillStyle='#b09a5a';
+    ctx.beginPath(); ctx.moveTo(sx-15,sy-12); ctx.lineTo(sx,sy-22); ctx.lineTo(sx+15,sy-12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#c4ad6b';
+    ctx.beginPath(); ctx.moveTo(sx-15,sy-12); ctx.lineTo(sx,sy-22); ctx.lineTo(sx,sy-12); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(90,70,30,0.5)'; ctx.lineWidth=0.8;
+    for(let i=1;i<4;i++){
+      ctx.beginPath(); ctx.moveTo(sx-15+i*3.4,sy-12-i*2.2+1); ctx.lineTo(sx+15-i*3.4,sy-12-i*2.2+1); ctx.stroke();
+    }
+    ctx.fillStyle='#847e6e'; ctx.fillRect(sx+7,sy-20,3.4,6);
+    ctx.fillStyle='rgba(200,200,195,0.35)';
+    for(let i=0;i<3;i++){
+      const off=Math.sin(animT*1.5+i*2)*2;
+      ctx.beginPath(); ctx.arc(sx+8.7+off,sy-24-i*4,2+i*0.8,0,7); ctx.fill();
+    }
+  }
+}
+function stoneBody(sx,syTop,w,h,cA,cB){
+  ctx.fillStyle=cA; ctx.fillRect(sx-w/2,syTop,w/2,h);
+  ctx.fillStyle=cB; ctx.fillRect(sx,syTop,w/2,h);
+  ctx.strokeStyle='rgba(50,46,38,0.4)'; ctx.lineWidth=0.8;
+  for(let i=1;i<h/5;i++){
+    ctx.beginPath(); ctx.moveTo(sx-w/2+1,syTop+i*5); ctx.lineTo(sx+w/2-1,syTop+i*5); ctx.stroke();
+  }
+  for(let i=0;i<h/5;i++){
+    const off=(i%2)?w/4:0;
+    ctx.beginPath(); ctx.moveTo(sx-w/4+off,syTop+i*5); ctx.lineTo(sx-w/4+off,syTop+i*5+5); ctx.stroke();
+  }
+}
+function crenels(sx,syTop,w,cA){
+  ctx.fillStyle=cA;
+  ctx.fillRect(sx-w/2-2,syTop,w+4,4);
+  ctx.fillStyle='rgba(255,255,255,0.12)';
+  for(let i=0;i<4;i++) ctx.fillRect(sx-w/2-2+i*(w+4)/3.6,syTop-4,4,5);
+}
+function drawTower(t){
+  const d=TOWERS[t.type], raise=raiseAt(t.x,t.y);
+  const [cA,cB]=CIVS[S.defCiv].towerCol;
+  const sx=isoX(t.x,t.y), sy=isoY(t.x,t.y)+TH/2-raise;
+  shadow(sx+4,sy,13,4.5);
+  if(t.type==='siege'){
+    ctx.fillStyle='#4a3a20';
+    ctx.beginPath(); ctx.arc(sx-8,sy-3,4,0,7); ctx.arc(sx+8,sy-3,4,0,7); ctx.fill();
+    ctx.fillStyle='#6e5636'; ctx.beginPath(); ctx.arc(sx-8,sy-3,2,0,7); ctx.arc(sx+8,sy-3,2,0,7); ctx.fill();
+    ctx.fillStyle='#7a5f3a'; ctx.fillRect(sx-11,sy-9,22,6);
+    ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.strokeRect(sx-11,sy-9,22,6);
+    ctx.strokeStyle='#5a4326'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(sx-5,sy-8); ctx.lineTo(sx+8,sy-d.h-2); ctx.stroke();
+    ctx.fillStyle='#4a3a20'; ctx.beginPath(); ctx.arc(sx+8,sy-d.h-2,3.4,0,7); ctx.fill();
+    ctx.fillStyle='#8a8a7a'; ctx.beginPath(); ctx.arc(sx+8,sy-d.h-2,1.8,0,7); ctx.fill();
+  } else {
+    ctx.fillStyle=cB;
+    ctx.beginPath(); ctx.ellipse(sx,sy-2,10,4,0,0,7); ctx.fill();
+    const w=t.type==='watch'?13:15;
+    stoneBody(sx,sy-d.h,w,d.h-2,cA,cB);
+    crenels(sx,sy-d.h-3,w,cB);
+    ctx.fillStyle='#332f26';
+    ctx.fillRect(sx-1.5,sy-d.h+6,3,5);
+    ctx.beginPath(); ctx.moveTo(sx-3,sy-2); ctx.lineTo(sx-3,sy-9); ctx.arc(sx,sy-9,3,Math.PI,0); ctx.lineTo(sx+3,sy-2); ctx.closePath(); ctx.fill();
+    if(t.type==='unique'){
+      ctx.fillStyle='#3f6b2a'; ctx.beginPath(); ctx.arc(sx+2,sy-d.h-8,2.6,0,7); ctx.fill();
+      ctx.strokeStyle='#e8e2ce'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(sx+5.5,sy-d.h-8,3.4,-1.1,1.1); ctx.stroke();
+      ctx.strokeStyle='#5a4326'; ctx.beginPath(); ctx.moveTo(sx-5,sy-d.h-4); ctx.lineTo(sx-5,sy-d.h-14); ctx.stroke();
+      ctx.fillStyle=CIVS[S.defCiv].col1; ctx.beginPath(); ctx.moveTo(sx-5,sy-d.h-14); ctx.lineTo(sx+2,sy-d.h-11.5); ctx.lineTo(sx-5,sy-d.h-9); ctx.closePath(); ctx.fill();
+    }
+  }
+}
+function flames(sx,sy,scale){
+  for(let i=0;i<4;i++){
+    const fx=sx+Math.sin(animT*13+i*2.4)*3+(i-1.5)*6*scale;
+    const h=(9+Math.sin(animT*17+i)*3.5)*scale;
+    ctx.fillStyle=['rgba(230,120,30,0.8)','rgba(240,180,50,0.85)','rgba(200,60,20,0.75)','rgba(250,220,90,0.8)'][i];
+    ctx.beginPath(); ctx.moveTo(fx-3*scale,sy); ctx.quadraticCurveTo(fx,sy-h*1.7,fx+3*scale,sy); ctx.closePath(); ctx.fill();
+  }
+}
+function smokePuffs(sx,sy,inten){
+  for(let i=0;i<3;i++){
+    const p=(animT*0.5+i*0.33)%1;
+    ctx.fillStyle='rgba(80,80,78,'+(0.38*inten*(1-p)).toFixed(2)+')';
+    ctx.beginPath(); ctx.arc(sx+Math.sin(animT+i*2)*4+i*3-3,sy-p*28,3+p*7,0,7); ctx.fill();
+  }
+}
+function drawTCRuin(sx,sy){
+  ctx.fillStyle='#8a8474'; ctx.fillRect(sx-20,sy-10,40,9);
+  ctx.fillStyle='#6e685a';
+  ctx.beginPath(); ctx.moveTo(sx-17,sy-1); ctx.lineTo(sx-17,sy-18); ctx.lineTo(sx-10,sy-14); ctx.lineTo(sx-6,sy-1); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(sx+16,sy-1); ctx.lineTo(sx+16,sy-13); ctx.lineTo(sx+8,sy-9); ctx.lineTo(sx+5,sy-1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#7c7666';
+  for(let i=0;i<7;i++){ ctx.beginPath(); ctx.arc(sx-12+i*4,sy-3-(i%3)*2,2.4,0,7); ctx.fill(); }
+  ctx.strokeStyle='#2e2318'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(sx-8,sy-2); ctx.lineTo(sx+2,sy-16); ctx.moveTo(sx+6,sy-2); ctx.lineTo(sx-3,sy-12); ctx.stroke();
+  flames(sx-6,sy-4,1); flames(sx+7,sy-3,0.8);
+  smokePuffs(sx-4,sy-14,1); smokePuffs(sx+6,sy-10,0.9);
+}
+function drawTC(){
+  const raise=raiseAt(TC.x,TC.y);
+  const roof=CIVS[S.defCiv].env.roof;
+  const sx=isoX(TC.x,TC.y), sy=isoY(TC.x,TC.y)+TH/2-raise;
+  shadow(sx+5,sy+1,24,7);
+  if(S.battle&&S.battle.collapse!==undefined){ drawTCRuin(sx,sy); return; }
+  ctx.fillStyle='#8a8474'; ctx.fillRect(sx-20,sy-10,40,9);
+  ctx.strokeStyle='rgba(50,46,38,0.5)'; ctx.lineWidth=0.8;
+  for(let i=0;i<5;i++){ ctx.beginPath(); ctx.moveTo(sx-20+i*9,sy-10); ctx.lineTo(sx-20+i*9,sy-1); ctx.stroke(); }
+  ctx.fillStyle='#d8cba8'; ctx.fillRect(sx-17,sy-30,34,20);
+  ctx.strokeStyle='#5a4326'; ctx.lineWidth=2;
+  ctx.strokeRect(sx-17,sy-30,34,20);
+  ctx.beginPath();
+  ctx.moveTo(sx-17,sy-20); ctx.lineTo(sx+17,sy-20);
+  ctx.moveTo(sx-8,sy-30); ctx.lineTo(sx-8,sy-10);
+  ctx.moveTo(sx+8,sy-30); ctx.lineTo(sx+8,sy-10);
+  ctx.moveTo(sx-17,sy-30); ctx.lineTo(sx-8,sy-20); ctx.moveTo(sx-8,sy-20); ctx.lineTo(sx-17,sy-10);
+  ctx.moveTo(sx+17,sy-30); ctx.lineTo(sx+8,sy-20); ctx.moveTo(sx+8,sy-20); ctx.lineTo(sx+17,sy-10);
+  ctx.stroke();
+  ctx.fillStyle='#3d3427';
+  ctx.beginPath(); ctx.moveTo(sx-4,sy-1); ctx.lineTo(sx-4,sy-12); ctx.arc(sx,sy-12,4,Math.PI,0); ctx.lineTo(sx+4,sy-1); ctx.closePath(); ctx.fill();
+  ctx.fillRect(sx-14,sy-27,5,6);
+  ctx.fillRect(sx+10,sy-27,5,6);
+  ctx.fillStyle=roof;
+  ctx.beginPath(); ctx.moveTo(sx-22,sy-28); ctx.lineTo(sx,sy-46); ctx.lineTo(sx+22,sy-28); ctx.lineTo(sx+17,sy-28); ctx.lineTo(sx,sy-41); ctx.lineTo(sx-17,sy-28); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.16)';
+  ctx.beginPath(); ctx.moveTo(sx-17,sy-28); ctx.lineTo(sx,sy-41); ctx.lineTo(sx,sy-28); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=roof;
+  ctx.beginPath(); ctx.moveTo(sx-17,sy-28); ctx.lineTo(sx,sy-41); ctx.lineTo(sx+17,sy-28); ctx.closePath();
+  ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=0.8;
+  for(let i=1;i<4;i++){
+    ctx.beginPath(); ctx.moveTo(sx-17+i*4,sy-28-i*3+2); ctx.lineTo(sx+17-i*4,sy-28-i*3+2); ctx.stroke();
+  }
+  ctx.strokeStyle='#d4b45a'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(sx,sy-46); ctx.lineTo(sx,sy-58); ctx.stroke();
+  const fl=Math.sin(animT*3)*2;
+  ctx.fillStyle=CIVS[S.defCiv].col1;
+  ctx.beginPath(); ctx.moveTo(sx,sy-58); ctx.quadraticCurveTo(sx+6,sy-57+fl,sx+11,sy-55+fl); ctx.lineTo(sx+9,sy-52+fl*0.5); ctx.quadraticCurveTo(sx+5,sy-53,sx,sy-51); ctx.closePath(); ctx.fill();
+  if(S.battle){
+    const w=44, f=Math.max(0,S.battle.tcHp/TC_HP);
+    if(f<0.7) smokePuffs(sx-6,sy-40,0.8);
+    if(f<0.4){ flames(sx-9,sy-28,0.8); flames(sx+9,sy-27,0.7); smokePuffs(sx+4,sy-44,1); }
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(sx-w/2-1,sy-66,w+2,6);
+    ctx.fillStyle=f>0.4?'#6a9a4a':'#c05040'; ctx.fillRect(sx-w/2,sy-65,w*f,4);
+  }
+}
+function drawUnit(u){
+  const d=UNITS[u.type], raise=raiseAt(Math.round(u.x),Math.round(u.y));
+  const civ=CIVS[S.attCiv];
+  const bob=u.atk?0:Math.abs(Math.sin(animT*9+u.ph))*1.6;
+  const sx=isoX(u.x,u.y), sy=isoY(u.x,u.y)+TH/2-raise-bob;
+  shadow(sx,sy+bob,u.type==='siege'?12:(S.attCiv==='persia'&&u.type==='elite'?11:6),u.type==='siege'?4:(S.attCiv==='persia'&&u.type==='elite'?4:2.4));
+  if(S.attCiv==='persia'&&u.type==='elite'){
+    // válečný slon
+    ctx.fillStyle='#84848e';
+    ctx.beginPath(); ctx.ellipse(sx-1,sy-7,9,5.5,0,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx+8,sy-9,4,0,7); ctx.fill();
+    ctx.strokeStyle='#84848e'; ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(sx+11,sy-8); ctx.quadraticCurveTo(sx+14,sy-4,sx+12.6,sy-1); ctx.stroke();
+    ctx.strokeStyle='#e8e2ce'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(sx+10,sy-6); ctx.lineTo(sx+13.4,sy-4.4); ctx.stroke();
+    ctx.fillStyle='#6e6e78'; ctx.beginPath(); ctx.arc(sx+6,sy-11,2.6,0,7); ctx.fill();
+    ctx.strokeStyle='#5a5a64'; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(sx-6,sy-3); ctx.lineTo(sx-6,sy+1); ctx.moveTo(sx-2,sy-3); ctx.lineTo(sx-2,sy+1);
+    ctx.moveTo(sx+2,sy-3); ctx.lineTo(sx+2,sy+1); ctx.moveTo(sx+6,sy-3); ctx.lineTo(sx+6,sy+1);
+    ctx.stroke();
+    ctx.fillStyle=CIVS[S.attCiv].col1; ctx.fillRect(sx-6,sy-13,10,4.5);
+    ctx.fillStyle='#d8a878'; ctx.beginPath(); ctx.arc(sx-1,sy-15,2.2,0,7); ctx.fill();
+    const w=16, f=Math.max(0,u.hp/u.max);
+    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(sx-w/2-1,sy-24,w+2,4);
+    ctx.fillStyle=f>0.4?'#6a9a4a':'#c05040'; ctx.fillRect(sx-w/2,sy-23,w*f,2.6);
+    return;
+  }
+  if(u.type==='siege'){
+    ctx.fillStyle='#4a3a20';
+    ctx.beginPath(); ctx.arc(sx-8,sy-1,3,0,7); ctx.arc(sx,sy-1,3,0,7); ctx.arc(sx+8,sy-1,3,0,7); ctx.fill();
+    ctx.fillStyle='#7a5f3a';
+    ctx.beginPath(); ctx.moveTo(sx-13,sy-4); ctx.lineTo(sx,sy-13); ctx.lineTo(sx+13,sy-4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#8e6f45';
+    ctx.beginPath(); ctx.moveTo(sx-13,sy-4); ctx.lineTo(sx,sy-13); ctx.lineTo(sx,sy-4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(sx-13,sy-4); ctx.lineTo(sx+13,sy-4); ctx.stroke();
+    ctx.strokeStyle='#5a4326'; ctx.lineWidth=2.6;
+    ctx.beginPath(); ctx.moveTo(sx+11,sy-6); ctx.lineTo(sx+17,sy-7); ctx.stroke();
+  } else {
+    const big=(u.type==='elite'||u.type==='leader');
+    ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=1.6;
+    const leg=u.atk?0:Math.sin(animT*9+u.ph)*2;
+    ctx.beginPath(); ctx.moveTo(sx-1,sy-5); ctx.lineTo(sx-2-leg,sy);
+    ctx.moveTo(sx+1,sy-5); ctx.lineTo(sx+2+leg,sy); ctx.stroke();
+    const tunic=u.type==='leader'?'#b8952e':(u.type==='ranged'?civ.col2:civ.col1);
+    ctx.fillStyle=tunic;
+    ctx.beginPath(); ctx.moveTo(sx-3.4,sy-4); ctx.lineTo(sx-2.6,sy-11); ctx.lineTo(sx+2.6,sy-11); ctx.lineTo(sx+3.4,sy-4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#d8a878'; ctx.beginPath(); ctx.arc(sx,sy-13,big?3.2:2.7,0,7); ctx.fill();
+    // pokrývka hlavy dle národa
+    if(S.attCiv==='sarac'){
+      ctx.fillStyle='#e8e2ce'; ctx.beginPath(); ctx.arc(sx,sy-14,big?3.2:2.7,Math.PI,0); ctx.fill();
+      ctx.fillRect(sx-(big?3.2:2.7),sy-14.5,(big?6.4:5.4),1.6);
+    } else if(S.attCiv==='mongol'){
+      ctx.fillStyle='#5a4326';
+      ctx.beginPath(); ctx.moveTo(sx-(big?3.4:2.9),sy-14); ctx.lineTo(sx,sy-19); ctx.lineTo(sx+(big?3.4:2.9),sy-14); ctx.closePath(); ctx.fill();
+    } else {
+      ctx.fillStyle='#8a8a8a';
+      ctx.beginPath(); ctx.arc(sx,sy-14,big?3.2:2.7,Math.PI,0); ctx.fill();
+    }
+    if(S.attCiv==='viking'&&u.type==='elite'){
+      ctx.strokeStyle='#e8e2ce'; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(sx-3,sy-15); ctx.quadraticCurveTo(sx-6,sy-17,sx-5,sy-19);
+      ctx.moveTo(sx+3,sy-15); ctx.quadraticCurveTo(sx+6,sy-17,sx+5,sy-19); ctx.stroke();
+    }
+    if(u.type==='leader'){ ctx.fillStyle='#d4b45a'; ctx.fillRect(sx-3.4,sy-17.5,6.8,2.4); }
+    if(u.type==='ranged'){
+      ctx.strokeStyle='#e8e2ce'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(sx+5,sy-10,4,-1.15,1.15); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx+3.8,sy-13.5); ctx.lineTo(sx+3.8,sy-6.5); ctx.stroke();
+    } else if(u.type==='basic'||u.type==='elite'){
+      const sw=u.atk?Math.sin(animT*10+u.ph)*0.5:0;
+      ctx.strokeStyle='#5a4326'; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(sx+4,sy-8); ctx.lineTo(sx+7+sw*3,sy-14-sw*2); ctx.stroke();
+      ctx.fillStyle='#a8a8a8';
+      ctx.beginPath(); ctx.arc(sx+7+sw*3,sy-14.5-sw*2,2,0,7); ctx.fill();
+      if(u.type==='elite'){
+        ctx.fillStyle=civ.col2; ctx.beginPath(); ctx.arc(sx-5,sy-9,3.4,0,7); ctx.fill();
+        ctx.fillStyle='#d4b45a'; ctx.beginPath(); ctx.arc(sx-5,sy-9,1.2,0,7); ctx.fill();
+      }
+    } else if(u.type==='leader'){
+      ctx.strokeStyle='#8a8a8a'; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(sx+4,sy-8); ctx.lineTo(sx+8,sy-16); ctx.stroke();
+      ctx.fillStyle='#d4b45a'; ctx.beginPath(); ctx.arc(sx-5,sy-9,3.4,0,7); ctx.fill();
+      ctx.fillStyle=civ.col1; ctx.beginPath(); ctx.arc(sx-5,sy-9,1.4,0,7); ctx.fill();
+    }
+  }
+  const w=16, f=Math.max(0,u.hp/u.max);
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(sx-w/2-1,sy-22,w+2,4);
+  ctx.fillStyle=f>0.4?'#6a9a4a':'#c05040'; ctx.fillRect(sx-w/2,sy-21,w*f,2.6);
+}
+function drawRange(x,y,rng,col){
+  const sx=isoX(x,y), sy=isoY(x,y)+TH/2-raiseAt(x,y);
+  ctx.strokeStyle=col; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.ellipse(sx,sy,rng*TW/2,rng*TH/2,0,0,7); ctx.stroke();
+}
+function drawAttackInfo(){
+  // sloupec boxů při levém okraji, začíná pod plovoucím HUD
+  const w=150, lh=12, gap=6;
+  let y=64;
+  for(let i=0;i<PATH_KEYS.length&&i<4;i++){
+    const k=PATH_KEYS[i], arr=S.attackPlan[k]||[];
+    const lines=[];
+    const max=6;
+    arr.slice(0,max).forEach((u,j)=>lines.push((j+1)+'. '+UNITS[u].name));
+    if(arr.length>max) lines.push('… +'+(arr.length-max)+' dalších');
+    if(!arr.length) lines.push('(prázdná)');
+    const h=lines.length*lh+23;
+    if(y+h>VIEW_H-8) break;
+    const x=8;
+    ctx.fillStyle='rgba(20,22,14,0.8)';
+    ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle=S.selPath===k?'#d4b45a':'rgba(212,180,90,0.35)'; ctx.lineWidth=S.selPath===k?1.6:1;
+    ctx.strokeRect(x,y,w,h);
+    ctx.textAlign='left'; ctx.font='bold 11px Georgia'; ctx.fillStyle='#d4b45a';
+    ctx.fillText(PATH_NAMES[k]+(S.selPath===k?'  ◄':''),x+7,y+14);
+    ctx.font='11px Georgia'; ctx.fillStyle='#e8e2ce';
+    lines.forEach((ln,j)=>ctx.fillText(ln,x+7,y+28+j*lh));
+    y+=h+gap;
+  }
+}
+function render(){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.setTransform(SC*CAM.z,0,0,SC*CAM.z,-CAM.x*SC*CAM.z,-CAM.y*SC*CAM.z);
+  ctx.drawImage(terra,0,0,terra.width,terra.height,0,0,VIEW_W,VIEW_H);
+  drawWaves();
+  drawGulls();
+  for(const k of PATH_KEYS) drawCamp(0.9,PATHS[k][0][1]);
+  const objs=[];
+  MOUNTS.forEach(([x,y])=>objs.push({z:x+y, f:()=>drawMountain(x,y)}));
+  TREES.forEach(([x,y])=>objs.push({z:x+y, f:()=>drawTree(x,y)}));
+  ANIMALS.forEach(([x,y])=>objs.push({z:x+y, f:()=>drawAnimal(x,y)}));
+  DECOR.forEach(([x,y])=>objs.push({z:x+y, f:()=>drawHouse(x,y)}));
+  if(S.phase!=='prepAttack') S.towers.forEach(t=>objs.push({z:t.x+t.y, f:()=>drawTower(t)}));
+  objs.push({z:TC.x+TC.y, f:drawTC});
+  if(S.battle) S.battle.units.forEach(u=>objs.push({z:u.x+u.y, f:()=>drawUnit(u)}));
+  objs.sort((a,b)=>a.z-b.z).forEach(o=>o.f());
+  drawClouds();
+  if(S.battle){
+    for(const s of S.battle.shots){
+      const p=1-s.t/s.dur;
+      const x1=isoX(s.x1,s.y1), y1=isoY(s.x1,s.y1)+TH/2-raiseAt(s.x1,s.y1)-s.h;
+      const x2=isoX(s.x2,s.y2), y2=isoY(s.x2,s.y2)+TH/2-raiseAt(Math.round(s.x2),Math.round(s.y2))-6;
+      const arc=Math.hypot(x2-x1,y2-y1)*0.25;
+      const px=x1+(x2-x1)*p, py=y1+(y2-y1)*p-arc*4*p*(1-p);
+      const p2=p+0.08;
+      const px2=x1+(x2-x1)*p2, py2=y1+(y2-y1)*p2-arc*4*p2*(1-p2);
+      if(s.kind==='siege'){
+        ctx.fillStyle='#8a8a7a'; ctx.beginPath(); ctx.arc(px,py,3,0,7); ctx.fill();
+        ctx.strokeStyle='rgba(120,120,110,0.4)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(px2,py2); ctx.lineTo(px,py); ctx.stroke();
+      } else {
+        ctx.strokeStyle='#e8dcc0'; ctx.lineWidth=1.3;
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px2,py2); ctx.stroke();
+      }
+    }
+    for(const b of S.battle.blasts){
+      const sx=isoX(b.x,b.y), sy=isoY(b.x,b.y)+TH/2;
+      ctx.fillStyle='rgba(230,140,40,'+(b.t/0.3*0.5)+')';
+      ctx.beginPath(); ctx.ellipse(sx,sy,b.r*TW/2,b.r*TH/2,0,0,7); ctx.fill();
+      ctx.fillStyle='rgba(90,70,50,'+(b.t/0.3*0.35)+')';
+      ctx.beginPath(); ctx.ellipse(sx,sy-4,b.r*TW/3,b.r*TH/3,0,0,7); ctx.fill();
+      ctx.fillStyle='rgba(60,45,25,'+(b.t/0.3*0.8)+')';
+      for(let i=0;i<6;i++){
+        const a=i*1.05, rr=(1-b.t/0.3)*b.r*TW/2;
+        ctx.fillRect(sx+Math.cos(a)*rr,sy-5-(1-b.t/0.3)*11+Math.sin(a)*rr*0.5,2.2,2.2);
+      }
+    }
+  }
+  if(S.phase==='prepDefense'){
+    const [hx,hy]=S.hover;
+    if(hx>=0){
+      const ok=S.selTower&&canBuild(hx,hy);
+      drawDiamond(ctx,hx,hy,raiseAt(hx,hy),ok?'rgba(120,200,90,0.4)':'rgba(200,80,60,0.35)','#fff');
+      if(ok) drawRange(hx,hy,TOWERS[S.selTower].range+(hillSet.has(hx+','+hy)?0.5:0),'rgba(212,180,90,0.8)');
+    }
+    for(const t of S.towers) drawRange(t.x,t.y,TOWERS[t.type].range+(hillSet.has(t.x+','+t.y)?0.5:0),'rgba(212,180,90,0.25)');
+  }
+  if(S.phase==='prepAttack'){
+    for(const k of PATH_KEYS){
+      const col=k===S.selPath?'rgba(230,200,90,0.5)':'rgba(230,200,90,0.14)';
+      for(const [x,y] of PATHS[k]) drawDiamond(ctx,x,y,raiseAt(x,y),col,null);
+    }
+  }
+  // vrstvy fixní na obrazovce (neposouvají se se zoomem mapy)
+  ctx.setTransform(SC,0,0,SC,0,0);
+  if(S.phase==='prepAttack') drawAttackInfo();
+}
+
+/* ---------- Hlavní smyčka ---------- */
+let last=performance.now();
+function loop(now){
+  let dt=Math.min(0.05,(now-last)/1000); last=now;
+  animT+=dt;
+  if(S.phase==='prepAttack'||S.phase==='prepDefense'){ tickTimer(dt); updateHud(); }
+  if(S.phase==='battle'){ battleTick(dt*S.speed); updateHud(); }
+  render();
+  requestAnimationFrame(loop);
+}
+setupCanvas();
+generateMap();
+showMenu();
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>
