@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2326291f'/%3E%3Ctext x='32' y='47' font-size='42' text-anchor='middle'%3E%E2%9A%94%3C/text%3E%3C/svg%3E">
 <title>TD2026 — Souboj národů</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cpath%20d%3D%22M6%206%20H58%20V34%20Q58%2052%2032%2062%20Q6%2052%206%2034%20Z%22%20fill%3D%22%23e8c14a%22%20stroke%3D%22%238a6a1e%22%20stroke-width%3D%224%22%2F%3E%3Cg%20stroke%3D%22%233a2a14%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M19%2045%20L45%2017%22%2F%3E%3Cpath%20d%3D%22M19%2017%20L45%2045%22%2F%3E%3C%2Fg%3E%3Cg%20stroke%3D%22%23f7f2e2%22%20stroke-width%3D%222.6%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M21%2043%20L43%2019%22%2F%3E%3Cpath%20d%3D%22M21%2019%20L43%2043%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2231%22%20r%3D%224.5%22%20fill%3D%22%23b02025%22%20stroke%3D%22%233a2a14%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E">
 <style>
   :root{
     --bg:#1a1c16; --panel:#26291f; --panel2:#313526; --gold:#d4b45a;
@@ -130,7 +131,7 @@
    Hybrid Tower Defense inspirovaný Age of Empires II
    © MondAI
    ============================================================ */
-const VERSION='v0.16';
+const VERSION='v0.17';
 
 /* ---------- Konstanty ---------- */
 const TW=44, TH=22, COLS=22, ROWS=22, OX=495, OY=48;
@@ -139,8 +140,7 @@ const DEF_BUDGET=1000, TC_HP=900;
 const TC={x:18,y:11};
 // Zlato útočníka: víc cest = víc souběžného tlaku → méně zlata.
 // Slévání povoleno = obránci pomáhá společný úsek → +50. Úplně oddělené cesty (zákaz obojího) → −50.
-function attBudget(){
-  const np=PATH_KEYS.length;
+function attBudgetFor(np){
   let b=({1:1550,2:1450,3:1350,4:1250})[np]||1400;
   if(np>1&&S.cfg.allowMerge!==false) b+=50;
   if(np>1&&S.cfg.allowMerge===false&&S.cfg.allowCross===false) b-=50;
@@ -485,10 +485,10 @@ function expandPath(corners){
 const S={
   phase:'menu',
   cfg:{time:0, attacker:'human', defender:'pc', first:'attacker', paths:0, sound:'off', allowCross:true, allowMerge:true,
-       attackerCiv:'random', defenderCiv:'random'},
-  attCiv:'viking', defCiv:'brit',
+       attackerCiv:'random', defenderCiv:'random', att2:false, att2Civ:'random'},
+  attCiv:'viking', defCiv:'brit', att2Civ:null,
   timeLeft:0, timerOn:false,
-  attackPlan:{}, budgetA:1400,
+  attackPlan:{}, budgetA:1400, attackPlan2:{}, budgetA2:0, curAtt:1,
   towers:[], budgetD:DEF_BUDGET,
   selPath:'0', selTower:null, hover:[-1,-1],
   speed:1, keepMap:false,
@@ -497,19 +497,32 @@ const S={
 let animT=0;
 
 /* ---------- Náhodně generovaná mapa ---------- */
-let PATHS={}, PATH_KEYS=[], PATH_NAMES={}, pathSet=new Set(),
+let PATHS={}, PATH_KEYS=[], PATH_NAMES={}, PATH_OWNER={}, PATH_KEYS1=[], PATH_KEYS2=[], pathSet=new Set(),
     TREES=[], treeSet=new Set(), DECOR=[], decorSet=new Set(),
     ANIMALS=[], ROCKS=[], BUSHES=[], FLOWERS=[], FIELDS=[], MOUNTS=[], mountSet=new Set();
 let __lastViol=0;
 
+function att2On(){ return S.cfg.att2===true; }
+function civOf(owner){ return owner===2?S.att2Civ:S.attCiv; }
+function UF(owner){ return CIVS[civOf(owner)||S.attCiv].units; }
+function keysOf(owner){ return owner===2?PATH_KEYS2:PATH_KEYS1; }
+function planOf(owner){ return owner===2?S.attackPlan2:S.attackPlan; }
+function budA(){ return S.curAtt===2?S.budgetA2:S.budgetA; }
+function budASub(v){ if(S.curAtt===2)S.budgetA2-=v; else S.budgetA-=v; }
+function budAAdd(v){ if(S.curAtt===2)S.budgetA2+=v; else S.budgetA+=v; }
 function resolveCivs(){
   const keys=Object.keys(CIVS);
   let a=S.cfg.attackerCiv||'random', d=S.cfg.defenderCiv||'random';
   if(a==='random'){ const pool=keys.filter(k=>k!==d); a=pool[Math.floor(Math.random()*pool.length)]; }
   if(d==='random'||d===a){ const pool=keys.filter(k=>k!==a); d=pool[Math.floor(Math.random()*pool.length)]; }
-  S.attCiv=a; S.defCiv=d;
+  let a2=null;
+  if(att2On()){
+    a2=S.cfg.att2Civ||'random';
+    if(a2==='random'||a2===a||a2===d){ const pool=keys.filter(k=>k!==a&&k!==d); a2=pool[Math.floor(Math.random()*pool.length)]; }
+  }
+  S.attCiv=a; S.defCiv=d; S.att2Civ=a2;
   UNITS=CIVS[a].units; TOWERS=CIVS[d].towers;
-  SEA=(a==='viking'); // Vikingové se vyloďují z moře, ostatní táboří na souši
+  SEA=(a==='viking'||a2==='viking'); // moře, pokud se kterýkoli útočník vyloďuje
 }
 function __plazaCount(){
   let c=0;
@@ -519,17 +532,21 @@ function __plazaCount(){
   return c;
 }
 function __genPaths(){
-  const n=S.cfg.paths>0?S.cfg.paths:2+Math.floor(Math.random()*3);
-  const startRows=[3,6,9,12,15,18].sort(()=>Math.random()-0.5).slice(0,n).sort((a,b)=>a-b);
+  const two=att2On();
+  const per=S.cfg.paths>0?S.cfg.paths:2+Math.floor(Math.random()*3);
+  const n=two?per*2:per;
+  const rowPool=two?[2,4,7,9,12,14,17,19]:[3,6,9,12,15,18];
+  const startRows=rowPool.slice().sort(()=>Math.random()-0.5).slice(0,n).sort((a,b)=>a-b);
   let sides;
   if(S.cfg.allowCross===false){
     // deterministické párování: horní řada→sever, dolní→jih, střední→západ/východ
-    sides=(n===1?['W']:n===2?['S','N']:n===3?['S','W','N']:['S','W','N','E']).slice();
+    const base=(n===1?['W']:n===2?['S','N']:n===3?['S','W','N']:['S','W','N','E']);
+    sides=n<=4?base.slice():Array.from({length:n},(_,j)=>['S','W','N','E'][j%4]).reverse();
   } else {
     sides=['N','S','W','E'].sort(()=>Math.random()-0.5);
   }
-  PATHS={}; PATH_KEYS=[]; PATH_NAMES={};
-  const built=[];
+  PATHS={}; PATH_KEYS=[]; PATH_NAMES={}; PATH_OWNER={}; PATH_KEYS1=[]; PATH_KEYS2=[];
+  const built1=[], built2=[];
   const occ=new Set();
   const occAdj=(tiles)=>{
     let a=0;
@@ -541,8 +558,10 @@ function __genPaths(){
   };
   __lastViol=0;
   for(let i=0;i<n;i++){
+    const owner=(two&&i>=per)?2:1;
+    const built=owner===2?built2:built1;
     const y0=startRows[i];
-    const side=sides.pop()||'W';
+    const side=sides.pop()||['N','S','W','E'][Math.floor(Math.random()*4)];
     let best=null, bestAdj=1e9, bestShared=0;
     const ATTEMPTS=S.cfg.allowCross===false?24:12;
     for(let att=0;att<ATTEMPTS;att++){
@@ -558,9 +577,9 @@ function __genPaths(){
         continue;
       }
       const noCross=S.cfg.allowCross===false;
-      const x1=noCross?6+i:6+Math.floor(Math.random()*4);
+      const x1=noCross?Math.min(13,6+i):6+Math.floor(Math.random()*4);
       const ym=noCross?clampY(y0+(Math.random()<0.5?-1:1)):clampY(y0+Math.floor(Math.random()*7)-3);
-      const x2=noCross?10+i:11+Math.floor(Math.random()*3);
+      const x2=noCross?Math.min(16,10+i):11+Math.floor(Math.random()*3);
       let y2=clampY(Math.round((ym+11)/2)+Math.floor(Math.random()*5)-2);
       const c=[[3,y0],[x1,y0],[x1,ym],[x2,ym]];
       if(side==='N'){ y2=noCross?8:Math.min(y2,8); c.push([x2,y2],[18,y2],[18,10]); }
@@ -577,7 +596,9 @@ function __genPaths(){
     __lastViol+=bestShared;
     best.forEach(([x,y])=>occ.add(x+','+y));
     const k=String(i);
-    PATHS[k]=best; PATH_KEYS.push(k); PATH_NAMES[k]='Cesta '+(i+1);
+    PATHS[k]=best; PATH_KEYS.push(k); PATH_OWNER[k]=owner;
+    (owner===2?PATH_KEYS2:PATH_KEYS1).push(k);
+    PATH_NAMES[k]='Cesta '+((owner===2?PATH_KEYS2:PATH_KEYS1).length)+(two?(owner===2?' · Ú2':' · Ú1'):'');
     built.push(best);
   }
   pathSet=occ;
@@ -1020,6 +1041,19 @@ function showMenu(){
       </div>
       </div>
       </div>
+      <div class="orow" style="margin-top:8px">
+        <label style="display:flex; gap:8px; align-items:center; cursor:pointer; font-size:15px">
+          Chceš přidat druhého útočníka?
+          <input type="checkbox" id="att2Chk" style="width:18px; height:18px; accent-color:#d4b45a" ${S.cfg.att2?'checked':''} ${S.keepMap?'disabled':''}>
+        </label>
+      </div>
+      <div id="att2Box" style="display:${S.cfg.att2?'block':'none'}">
+        <div class="olabel">Útočník 2 — vždy člověk</div>
+        <div class="civrow" style="justify-content:center">
+          <canvas id="erbAtt2" width="54" height="62"></canvas>
+          <select id="selAtt2" class="csel" ${S.keepMap?'disabled':''}>${civOpts(S.keepMap?(S.att2Civ||'random'):t.att2Civ)}</select>
+        </div>
+      </div>
       <div class="orow" style="margin-top:10px; align-items:stretch">
         <div class="opt" id="sndBtn" title="Zvuk zapnout / vypnout" style="font-size:20px; padding:6px 16px; display:flex; align-items:center"></div>
         <button class="btn" id="mStart" style="margin-top:0">⚔ Zahájit nájezd</button>
@@ -1062,12 +1096,18 @@ function showMenu(){
   togIcons();
   // národy: comboboxy + erby + vzájemné vyloučení
   const sa=document.getElementById('selAtt'), sd=document.getElementById('selDef');
+  const s2=document.getElementById('selAtt2'), chk=document.getElementById('att2Chk'), a2box=document.getElementById('att2Box');
   function syncCivUI(){
-    [...sa.options].forEach(o=>o.disabled=(o.value!=='random'&&o.value===sd.value));
-    [...sd.options].forEach(o=>o.disabled=(o.value!=='random'&&o.value===sa.value));
+    const v2=S.cfg.att2?s2.value:null;
+    [...sa.options].forEach(o=>o.disabled=(o.value!=='random'&&(o.value===sd.value||o.value===v2)));
+    [...sd.options].forEach(o=>o.disabled=(o.value!=='random'&&(o.value===sa.value||o.value===v2)));
+    [...s2.options].forEach(o=>o.disabled=(o.value!=='random'&&(o.value===sa.value||o.value===sd.value)));
     drawErb(document.getElementById('erbAtt'), S.keepMap?S.attCiv:sa.value);
     drawErb(document.getElementById('erbDef'), S.keepMap?S.defCiv:sd.value);
+    drawErb(document.getElementById('erbAtt2'), S.keepMap?(S.att2Civ||'random'):s2.value);
   }
+  chk.onchange=()=>{ S.cfg.att2=chk.checked; a2box.style.display=chk.checked?'block':'none'; sfx.menuClick(); syncCivUI(); };
+  s2.onchange=()=>{ S.cfg.att2Civ=s2.value; syncCivUI(); sfx.menuClick(); };
   sa.onchange=()=>{ S.cfg.attackerCiv=sa.value; syncCivUI(); sfx.menuClick(); };
   sd.onchange=()=>{ S.cfg.defenderCiv=sd.value; syncCivUI(); sfx.menuClick(); };
   syncCivUI();
@@ -1114,24 +1154,34 @@ function startGame(){
   overlay.className='hidden';
   if(S.keepMap){ S.keepMap=false; }
   else generateMap();
-  S.attackPlan={}; PATH_KEYS.forEach(k=>S.attackPlan[k]=[]);
-  S.budgetA=attBudget(); S.towers=[]; S.budgetD=DEF_BUDGET; S.selPath=PATH_KEYS[0];
-  S.done={att:false,def:false}; S.lowNotice=false;
-  if(S.cfg.first==='defender') startPrepDefense(); else startPrepAttack();
+  S.attackPlan={}; PATH_KEYS1.forEach(k=>S.attackPlan[k]=[]);
+  S.attackPlan2={}; PATH_KEYS2.forEach(k=>S.attackPlan2[k]=[]);
+  S.budgetA=attBudgetFor(PATH_KEYS1.length);
+  S.budgetA2=att2On()?attBudgetFor(PATH_KEYS2.length):0;
+  S.towers=[]; S.budgetD=DEF_BUDGET*(att2On()?2:1);
+  S.curAtt=1; S.selPath=PATH_KEYS1[0];
+  S.done={att:false,att2:att2On()?false:true,def:false};
+  // Útočník 2 setuje vždy po Útočníkovi 1; obránce dle volby „Kdo začíná"
+  S.order=S.cfg.first==='defender'?['def','att','att2']:['att','att2','def'];
+  S.lowNotice=false;
+  nextPhase();
 }
-function finishAttack(){
-  S.done.att=true; S.lowNotice=false;
-  if(S.done.def) startBattle(); else startPrepDefense();
+function nextPhase(){
+  const nxt=S.order.find(p=>!S.done[p]);
+  if(!nxt){ startBattle(); return; }
+  if(nxt==='def') startPrepDefense();
+  else if(nxt==='att') startPrepAttack();
+  else startPrepAttack2();
 }
-function finishDefense(){
-  S.done.def=true; S.lowNotice=false;
-  if(S.done.att) startBattle(); else startPrepAttack();
-}
+function finishAttack(){ S.done.att=true; S.lowNotice=false; nextPhase(); }
+function finishAttack2(){ S.done.att2=true; S.lowNotice=false; nextPhase(); }
+function finishDefense(){ S.done.def=true; S.lowNotice=false; nextPhase(); }
+function curFinishAttack(){ (S.curAtt===2?finishAttack2:finishAttack)(); }
 function cheapest(obj){return Math.min(...Object.values(obj).map(o=>o.cost));}
-// při vyčerpání zlata se hra automaticky předá dál (druhému hráči, nebo rovnou do bitvy)
+// při vyčerpání zlata se hra automaticky předá dál (dalšímu hráči, nebo rovnou do bitvy)
 function checkBudgetA(){
-  if(S.budgetA>=cheapest(UNITS)) return;
-  sfx.coins(); finishAttack();
+  if(budA()>=cheapest(UF(S.curAtt))) return;
+  sfx.coins(); curFinishAttack();
 }
 function checkBudgetD(){
   if(S.budgetD>=cheapest(TOWERS)) return;
@@ -1140,60 +1190,70 @@ function checkBudgetD(){
 
 /* ---------- Fáze: příprava útoku ---------- */
 function startPrepAttack(){
-  S.phase='prepAttack'; S.timeLeft=S.cfg.time; S.timerOn=false;
+  S.curAtt=1; S.phase='prepAttack'; S.timeLeft=S.cfg.time; S.timerOn=false; S.selPath=PATH_KEYS1[0];
   const an=CIVS[S.attCiv].name;
+  const role=att2On()?'útočník 1':'útočník';
   if(S.cfg.attacker==='pc'){
-    civAutoOverlay(S.attCiv,'útočník — počítač','Počítač připravuje útok…','Vojevůdce národa '+an+' svolává vojsko.',1100,()=>{
+    civAutoOverlay(S.attCiv,role+' — počítač','Počítač připravuje útok…','Vojevůdce národa '+an+' svolává vojsko.',1100,()=>{
       S.attackPlan=aiAttackPlan(); S.budgetA=0; finishAttack();
     });
   } else {
-    civOverlay(S.attCiv,'útočník','Připrav vojsko','Vyber cestu ('+PATH_KEYS.length+') a nakupuj jednotky. Rozpis vojska sleduj vlevo na mapě. Obranu protivníka nevidíš. '+limitText(),'Začít přípravu',()=>{
+    civOverlay(S.attCiv,role,'Připrav vojsko','Vyber cestu ('+PATH_KEYS1.length+') a nakupuj jednotky. Rozpis vojska sleduj vlevo na mapě. Přípravu ostatních hráčů nevidíš. '+limitText(),'Začít přípravu',()=>{
       S.timerOn=S.cfg.time>0; buildAttackPanel();
     });
   }
   updateHud();
 }
+function startPrepAttack2(){
+  S.curAtt=2; S.phase='prepAttack2'; S.timeLeft=S.cfg.time; S.timerOn=false; S.selPath=PATH_KEYS2[0];
+  civOverlay(S.att2Civ,'útočník 2','Připrav vojsko','Vyber cestu ('+PATH_KEYS2.length+') a nakupuj jednotky. Rozpis vojska sleduj vlevo na mapě. Přípravu ostatních hráčů nevidíš. '+limitText(),'Začít přípravu',()=>{
+    S.timerOn=S.cfg.time>0; buildAttackPanel();
+  });
+  updateHud();
+}
 function buildAttackPanel(){
-  panel.innerHTML='<h3>'+CIVS[S.attCiv].name+' — cesta útoku</h3>';
+  const AU=UF(S.curAtt), keys=keysOf(S.curAtt), plan=planOf(S.curAtt);
+  panel.innerHTML='<h3>'+CIVS[civOf(S.curAtt)].name+(att2On()?' — útočník '+S.curAtt:'')+' — cesta útoku</h3>';
   const tabs=document.createElement('div'); tabs.className='ptabs';
-  for(const k of PATH_KEYS){
+  keys.forEach((k,idx)=>{
     const d=document.createElement('div'); d.className='ptab'+(S.selPath===k?' sel':'');
-    d.textContent=(+k+1);
+    d.textContent=(idx+1);
     d.title=PATH_NAMES[k];
     d.onclick=()=>{S.selPath=k; sfx.menuClick(); buildAttackPanel();};
     tabs.appendChild(d);
-  }
+  });
   panel.appendChild(tabs);
   const undo=document.createElement('button'); undo.className='btn'; undo.style.padding='6px'; undo.style.fontSize='13px'; undo.style.background='var(--panel2)';
   undo.textContent='↩ Odebrat poslední jednotku';
-  undo.onclick=()=>{ const arr=S.attackPlan[S.selPath]; if(arr.length){ S.budgetA+=UNITS[arr.pop()].cost; S.lowNotice=false; sfx.coins(); buildAttackPanel(); } };
+  undo.onclick=()=>{ const arr=plan[S.selPath]; if(arr.length){ budAAdd(AU[arr.pop()].cost); S.lowNotice=false; sfx.coins(); buildAttackPanel(); } };
   panel.appendChild(undo);
   const h=document.createElement('h3'); h.textContent='Jednotky (klik = přidat)'; panel.appendChild(h);
-  for(const k in UNITS){
-    const u=UNITS[k], c=document.createElement('div');
-    c.className='card'+(u.cost>S.budgetA?' dis':'');
+  for(const k in AU){
+    const u=AU[k], c=document.createElement('div');
+    c.className='card'+(u.cost>budA()?' dis':'');
     c.innerHTML=`<span class="cost">${u.cost} 🪙</span><span class="nm">${u.name}</span>
       <div class="st">HP ${u.hp} · síla ${u.dps} · rychlost ${u.speed} · ${u.desc}</div>`;
-    c.onclick=()=>{ if(u.cost<=S.budgetA){ S.budgetA-=u.cost; S.attackPlan[S.selPath].push(k); sfx.place(k); buildAttackPanel(); checkBudgetA(); } };
+    c.onclick=()=>{ if(u.cost<=budA()){ budASub(u.cost); plan[S.selPath].push(k); sfx.place(k); buildAttackPanel(); checkBudgetA(); } };
     panel.appendChild(c);
   }
   const done=document.createElement('button'); done.className='btn'; done.textContent='✓ Vojsko připraveno';
-  done.onclick=finishAttack; panel.appendChild(done);
+  done.onclick=curFinishAttack; panel.appendChild(done);
   updateHud();
 }
 function aiAttackPlan(){
-  const plan={}; PATH_KEYS.forEach(k=>plan[k]=[]);
-  let b=attBudget(), leaders=0;
-  const pref=PATH_KEYS.slice().sort(()=>Math.random()-0.5).slice(0,Math.min(2,PATH_KEYS.length));
+  const KS=PATH_KEYS1, AU=UF(1);
+  const plan={}; KS.forEach(k=>plan[k]=[]);
+  let b=attBudgetFor(KS.length), leaders=0;
+  const pref=KS.slice().sort(()=>Math.random()-0.5).slice(0,Math.min(2,KS.length));
   const w=['basic','basic','basic','ranged','ranged','elite','elite','siege','leader'];
   let guard=0;
   while(guard++<200){
-    const aff=w.filter(k=>UNITS[k].cost<=b && !(k==='leader'&&leaders>=2));
+    const aff=w.filter(k=>AU[k].cost<=b && !(k==='leader'&&leaders>=2));
     if(!aff.length) break;
     const k=aff[Math.floor(Math.random()*aff.length)];
     if(k==='leader') leaders++;
-    b-=UNITS[k].cost;
-    const pk=Math.random()<0.8?pref[Math.floor(Math.random()*pref.length)]:PATH_KEYS[Math.floor(Math.random()*PATH_KEYS.length)];
+    b-=AU[k].cost;
+    const pk=Math.random()<0.8?pref[Math.floor(Math.random()*pref.length)]:KS[Math.floor(Math.random()*KS.length)];
     plan[pk].push(k);
   }
   return plan;
@@ -1267,20 +1327,27 @@ function startBattle(){
   overlay.className='hidden';
   S.phase='battle'; S.timerOn=false; S.selTower=null;
   const queues={};
+  const two=att2On();
   let total=0;
-  let totalHp=0;
-  for(const k of PATH_KEYS){ queues[k]={list:(S.attackPlan[k]||[]).slice(), t:0.5}; total+=queues[k].list.length;
-    queues[k].list.forEach(u=>totalHp+=UNITS[u].hp); }
-  S.battle={units:[], shots:[], blasts:[], queues, tcHp:TC_HP, killed:0, total, totalHp, time:0};
+  const totalHp={1:0,2:0};
+  for(const k of PATH_KEYS){
+    const owner=PATH_OWNER[k]||1;
+    queues[k]={list:(planOf(owner)[k]||[]).slice(), t:0.5, owner};
+    total+=queues[k].list.length;
+    queues[k].list.forEach(u=>totalHp[owner]+=UF(owner)[u].hp);
+  }
+  S.battle={units:[], shots:[], blasts:[], queues, tcHp:TC_HP, killed:0, total, totalHp,
+            dmg:{1:0,2:0}, two, time:0};
   S.towers.forEach(t=>t.cd=0);
-  panel.innerHTML='<h3>Bitva</h3><p class="hint">'+CIVS[S.attCiv].name+' '+(SEA?'se vyloďují':'vyrážejí z tábora')+'! Vydrží obrana národa '+CIVS[S.defCiv].name+'?</p>'+
+  panel.innerHTML='<h3>Bitva</h3><p class="hint">'+CIVS[S.attCiv].name+(two?' a '+CIVS[S.att2Civ].name:'')+' '+(SEA?'se vyloďují':'vyrážejí z tábora')+'! Vydrží obrana národa '+CIVS[S.defCiv].name+'?</p>'+
     '<div class="qlist" id="bstat"></div>';
   hudSpeed.style.display=''; hudTc.style.display='';
   updateHud();
 }
 function spawnUnit(pathKey,typeKey){
-  const p=PATHS[pathKey], u=UNITS[typeKey];
-  S.battle.units.push({type:typeKey, path:pathKey, wp:0, x:p[0][0], y:p[0][1],
+  const owner=PATH_OWNER[pathKey]||1;
+  const p=PATHS[pathKey], u=UF(owner)[typeKey];
+  S.battle.units.push({type:typeKey, path:pathKey, owner, wp:0, x:p[0][0], y:p[0][1],
     hp:u.hp, max:u.hp, atk:false, ph:Math.random()*7});
 }
 function battleTick(dt){
@@ -1291,10 +1358,10 @@ function battleTick(dt){
     if(q.list.length){ q.t-=dt; if(q.t<=0){ const ut=q.list.shift(); spawnUnit(k,ut); sfx.spawn(ut); q.t=1.25; } }
   }
   for(const u of B.units){
-    const d=UNITS[u.type];
+    const d=UF(u.owner)[u.type];
     if(d.regen) u.hp=Math.min(u.max,u.hp+d.regen*dt);
     const dTc=dist(u.x,u.y,TC.x,TC.y);
-    if(dTc<=d.range+0.55){ u.atk=true; B.tcHp-=d.dps*dt; B.burn=true; }
+    if(dTc<=d.range+0.55){ u.atk=true; B.tcHp-=d.dps*dt; B.dmg[u.owner]+=d.dps*dt; B.burn=true; }
     else{
       u.atk=false;
       const p=PATHS[u.path];
@@ -1303,12 +1370,14 @@ function battleTick(dt){
         const dd=dist(u.x,u.y,tx,ty), step=d.speed*dt;
         if(dd<=step){ u.x=tx; u.y=ty; u.wp++; }
         else{ u.x+=(tx-u.x)/dd*step; u.y+=(ty-u.y)/dd*step; }
-      } else { u.atk=true; B.tcHp-=d.dps*dt; B.burn=true; }
+      } else { u.atk=true; B.tcHp-=d.dps*dt; B.dmg[u.owner]+=d.dps*dt; B.burn=true; }
     }
   }
   for(const j of B.units){
-    if(UNITS[j.type].aura&&j.hp>0){
-      for(const u of B.units){ if(u!==j&&u.hp>0&&dist(u.x,u.y,j.x,j.y)<=2.5) u.hp=Math.min(u.max,u.hp+UNITS[j.type].aura*dt); }
+    const jd=UF(j.owner)[j.type];
+    if(jd.aura&&j.hp>0){
+      // vůdce léčí jen jednotky vlastního vojska
+      for(const u of B.units){ if(u!==j&&u.owner===j.owner&&u.hp>0&&dist(u.x,u.y,j.x,j.y)<=2.5) u.hp=Math.min(u.max,u.hp+jd.aura*dt); }
     }
   }
   for(const t of S.towers){
@@ -1326,7 +1395,7 @@ function battleTick(dt){
         for(const u of B.units){ if(u.hp>0&&dist(u.x,u.y,best.x,best.y)<=d.splash) u.hp-=d.dmg; }
         sfx.hit();
       } else {
-        best.hp-=Math.max(1,d.dmg-UNITS[best.type].pa);
+        best.hp-=Math.max(1,d.dmg-UF(best.owner)[best.type].pa);
         sfx.hit();
       }
     }
@@ -1347,43 +1416,49 @@ function battleTick(dt){
   const empty=PATH_KEYS.every(k=>!B.queues[k].list.length);
   if(empty&&!B.units.length&&B.collapse===undefined) endBattle('defender');
   const st=document.getElementById('bstat');
-  if(st) st.innerHTML=`Zabito útočníků: <b>${B.killed} / ${B.total}</b><br>Town Center: <b>${Math.ceil(B.tcHp)} / ${TC_HP}</b>`;
+  if(st){
+    let sh=`Zabito útočníků: <b>${B.killed} / ${B.total}</b><br>Town Center: <b>${Math.ceil(B.tcHp)} / ${TC_HP}</b>`;
+    if(B.two) sh+=`<br>Poškození — ${CIVS[S.attCiv].name}: <b>${Math.round(B.dmg[1])}</b> · ${CIVS[S.att2Civ].name}: <b>${Math.round(B.dmg[2])}</b>`;
+    st.innerHTML=sh;
+  }
 }
 function endBattle(winner){
   S.phase='result';
   const B=S.battle;
+  const two=B.two;
   const aWin=winner==='attacker';
-  const an=CIVS[S.attCiv].name, dn=CIVS[S.defCiv].name;
-  let remain=B.units.reduce((s,u)=>s+Math.max(0,u.hp),0);
-  for(const k of PATH_KEYS) B.queues[k].list.forEach(u=>remain+=UNITS[u].hp);
-  const aPct=B.totalHp?Math.round(remain/B.totalHp*100):0;
+  // při dvou útočnících vítězí ten s větším poškozením Town Centeru
+  const winAtt=aWin?(two?(B.dmg[1]>=B.dmg[2]?1:2):1):0;
+  const remain={1:0,2:0};
+  B.units.forEach(u=>remain[u.owner]+=Math.max(0,u.hp));
+  for(const k of PATH_KEYS){ const o=PATH_OWNER[k]||1; B.queues[k].list.forEach(u=>remain[o]+=UF(o)[u].hp); }
+  const pctOf=o=>B.totalHp[o]?Math.round(remain[o]/B.totalHp[o]*100):0;
+  const aPct=pctOf(1);
   const dPct=Math.round(Math.max(0,B.tcHp)/TC_HP*100);
-  // TOP10: jen výhry člověka
+  const an=CIVS[S.attCiv].name, dn=CIVS[S.defCiv].name, an2=two?CIVS[S.att2Civ].name:'';
+  const title=aWin?('🔥 '+(winAtt===2?an2:an)+' zvítězili!'):('🏰 '+dn+' ubránili!');
+  const card=(civ,label,body,isWin,erbId)=>`
+        <div class="rescol ${isWin?'winner':''}">
+          <canvas id="${erbId}" width="54" height="62"></canvas>
+          <div class="resname">${CIVS[civ].name}</div>
+          <div class="hint">${label}</div>
+          <div class="respct">${body}</div>
+        </div>`;
+  let cards=card(S.attCiv,two?'útočník 1':'útočník','Vojsko: <b>'+aPct+' %</b> HP'+(two?'<br>Poškození: <b>'+Math.round(B.dmg[1])+'</b>':''),aWin&&winAtt===1,'erbRA');
+  if(two) cards+=card(S.att2Civ,'útočník 2','Vojsko: <b>'+pctOf(2)+' %</b> HP<br>Poškození: <b>'+Math.round(B.dmg[2])+'</b>',aWin&&winAtt===2,'erbRA2');
+  cards+='<div class="resvs">⚔</div>'+card(S.defCiv,'obránce','Hrad: <b>'+dPct+' %</b> HP',!aWin,'erbRD');
+  // TOP10: jen výhry člověka a jen hra dvou hráčů
   const winnerHuman=aWin ? S.cfg.attacker==='human' : S.cfg.defender==='human';
   const vsHuman=aWin ? S.cfg.defender==='human' : S.cfg.attacker==='human';
-  const score=calcScore(B,aWin,aPct,dPct,vsHuman);
+  const score=two?0:calcScore(B,aWin,aPct,dPct,vsHuman);
   const d10=loadTop();
-  const canSave=winnerHuman&&storageOk()&&!B.saved&&qualifies(aWin?d10.att:d10.def,score);
+  const canSave=!two&&winnerHuman&&storageOk()&&!B.saved&&qualifies(aWin?d10.att:d10.def,score);
   overlay.className=''; overlay.innerHTML=`
     <div class="obox">
-      <h1>${aWin?'🔥 '+an+' zvítězili!':'🏰 '+dn+' ubránili!'}</h1>
+      <h1>${title}</h1>
       <p>${aWin?'Town Center lehl popelem.':'Poslední útočník padl před hradbami.'}</p>
-      <div class="resrow">
-        <div class="rescol ${aWin?'winner':''}">
-          <canvas id="erbRA" width="54" height="62"></canvas>
-          <div class="resname">${an}</div>
-          <div class="hint">útočník</div>
-          <div class="respct">Vojsko: <b>${aPct} %</b> HP</div>
-        </div>
-        <div class="resvs">⚔</div>
-        <div class="rescol ${aWin?'':'winner'}">
-          <canvas id="erbRD" width="54" height="62"></canvas>
-          <div class="resname">${dn}</div>
-          <div class="hint">obránce</div>
-          <div class="respct">Hrad: <b>${dPct} %</b> HP</div>
-        </div>
-      </div>
-      <p>Zabito útočníků: ${B.killed} / ${B.total} · Délka bitvy: ${B.time.toFixed(0)} s · Body vítěze: <b style="color:var(--gold)">${score}</b></p>
+      <div class="resrow">${cards}</div>
+      <p>Zabito útočníků: ${B.killed} / ${B.total} · Délka bitvy: ${B.time.toFixed(0)} s${two?'':' · Body vítěze: <b style="color:var(--gold)">'+score+'</b>'}</p>
       ${canSave?'<button class="btn" id="oTop" style="margin-bottom:8px">🏆 Uložit vítězství do TOP10</button><br>':''}
       <button class="btn" id="oAgain">Nová hra na nové mapě</button>
       <button class="btn" id="oSame" style="margin-left:8px">Odveta na stejné mapě</button>
@@ -1391,6 +1466,7 @@ function endBattle(winner){
       <div class="ver">© MondAI · ${VERSION}</div>
     </div>`;
   drawErb(document.getElementById('erbRA'),S.attCiv);
+  if(two) drawErb(document.getElementById('erbRA2'),S.att2Civ);
   drawErb(document.getElementById('erbRD'),S.defCiv);
   const endMenu=(keep)=>{ hudSpeed.style.display='none'; hudTc.style.display='none'; S.keepMap=keep; showMenu(); };
   document.getElementById('oAgain').onclick=()=>endMenu(false);
@@ -1410,13 +1486,16 @@ function endBattle(winner){
 function fmtT(s){ s=Math.max(0,Math.ceil(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function updateHud(){
   const an=CIVS[S.attCiv]?CIVS[S.attCiv].name:'útočník', dn=CIVS[S.defCiv]?CIVS[S.defCiv].name:'obránce';
-  const ph={menu:'Menu', prepAttack:'Příprava útoku — '+an, prepDefense:'Příprava obrany — '+dn,
+  const an2=S.att2Civ&&CIVS[S.att2Civ]?CIVS[S.att2Civ].name:'útočník 2';
+  const ph={menu:'Menu', prepAttack:'Příprava útoku — '+an+(att2On()?' (Ú1)':''),
+            prepAttack2:'Příprava útoku — '+an2+' (Ú2)', prepDefense:'Příprava obrany — '+dn,
             battle:'Bitva', result:'Konec'}[S.phase];
   hudPhase.textContent=ph;
   if(S.phase==='prepAttack') hudGold.innerHTML='Zlato: <b>'+S.budgetA+'</b>';
+  else if(S.phase==='prepAttack2') hudGold.innerHTML='Zlato: <b>'+S.budgetA2+'</b>';
   else if(S.phase==='prepDefense') hudGold.innerHTML='Zlato: <b>'+S.budgetD+'</b>';
   else hudGold.innerHTML='Zlato: <b>—</b>';
-  const prep=(S.phase==='prepAttack'||S.phase==='prepDefense');
+  const prep=(S.phase==='prepAttack'||S.phase==='prepAttack2'||S.phase==='prepDefense');
   hudTimer.textContent=S.timerOn?fmtT(S.timeLeft):(prep&&S.cfg.time===0?'∞':'—');
   hudTimer.className=(S.timerOn&&S.timeLeft<=15)?'low':'';
   if(S.battle) hudTc.innerHTML='Town Center: <b>'+Math.ceil(S.battle.tcHp)+'</b>';
@@ -1427,6 +1506,7 @@ function tickTimer(dt){
   if(S.timeLeft<=0){
     S.timerOn=false;
     if(S.phase==='prepAttack') finishAttack();
+    else if(S.phase==='prepAttack2') finishAttack2();
     else if(S.phase==='prepDefense') finishDefense();
   }
 }
@@ -1706,14 +1786,16 @@ function buildTerrain(){
     }
   }
   // číselné popisky výchozích bodů
-  for(let i=0;i<PATH_KEYS.length;i++){
-    const [x,y]=PATHS[PATH_KEYS[i]][0];
+  for(const k of PATH_KEYS){
+    const owner=PATH_OWNER[k]||1;
+    const num=(owner===2?PATH_KEYS2:PATH_KEYS1).indexOf(k)+1;
+    const [x,y]=PATHS[k][0];
     const sx=isoX(x,y), sy=isoY(x,y)-6;
     tx2.fillStyle='rgba(20,22,14,0.75)';
     tx2.beginPath(); tx2.arc(sx,sy,7.5,0,7); tx2.fill();
-    tx2.strokeStyle='#d4b45a'; tx2.lineWidth=1.2; tx2.stroke();
+    tx2.strokeStyle=owner===2?'#7ab0ff':'#d4b45a'; tx2.lineWidth=1.2; tx2.stroke();
     tx2.fillStyle='#e8e2ce'; tx2.font='bold 10px Georgia'; tx2.textAlign='center';
-    tx2.fillText(String(i+1),sx,sy+3.5);
+    tx2.fillText(String(num),sx,sy+3.5);
   }
 }
 
@@ -1846,8 +1928,8 @@ function drawYurt(x,y,flag){
     ctx.beginPath(); ctx.moveTo(sx+11,sy-22); ctx.lineTo(sx+18,sy-20+Math.sin(animT*3)*1.5); ctx.lineTo(sx+11,sy-17); ctx.closePath(); ctx.fill();
   }
 }
-function drawCamp(x,y){
-  const camp=CIVS[S.attCiv].camp, col=CIVS[S.attCiv].col1;
+function drawCamp(x,y,civKey){
+  const camp=CIVS[civKey].camp, col=CIVS[civKey].col1;
   if(camp==='boat') drawBoat(x,y);
   else if(camp==='tent') drawTent(x,y,col);
   else if(camp==='fort') drawFort(x,y,col);
@@ -2238,12 +2320,13 @@ function drawTC(){
   }
 }
 function drawUnit(u){
-  const d=UNITS[u.type], raise=raiseAt(Math.round(u.x),Math.round(u.y));
-  const civ=CIVS[S.attCiv];
+  const owner=u.owner||1, civKey=civOf(owner);
+  const d=UF(owner)[u.type], raise=raiseAt(Math.round(u.x),Math.round(u.y));
+  const civ=CIVS[civKey];
   const bob=u.atk?0:Math.abs(Math.sin(animT*9+u.ph))*1.6;
   const sx=isoX(u.x,u.y), sy=isoY(u.x,u.y)+TH/2-raise-bob;
-  shadow(sx,sy+bob,u.type==='siege'?12:(S.attCiv==='persia'&&u.type==='elite'?11:6),u.type==='siege'?4:(S.attCiv==='persia'&&u.type==='elite'?4:2.4));
-  if(S.attCiv==='persia'&&u.type==='elite'){
+  shadow(sx,sy+bob,u.type==='siege'?12:(civKey==='persia'&&u.type==='elite'?11:6),u.type==='siege'?4:(civKey==='persia'&&u.type==='elite'?4:2.4));
+  if(civKey==='persia'&&u.type==='elite'){
     // válečný slon
     ctx.fillStyle='#84848e';
     ctx.beginPath(); ctx.ellipse(sx-1,sy-7,9,5.5,0,0,7); ctx.fill();
@@ -2258,7 +2341,7 @@ function drawUnit(u){
     ctx.moveTo(sx-6,sy-3); ctx.lineTo(sx-6,sy+1); ctx.moveTo(sx-2,sy-3); ctx.lineTo(sx-2,sy+1);
     ctx.moveTo(sx+2,sy-3); ctx.lineTo(sx+2,sy+1); ctx.moveTo(sx+6,sy-3); ctx.lineTo(sx+6,sy+1);
     ctx.stroke();
-    ctx.fillStyle=CIVS[S.attCiv].col1; ctx.fillRect(sx-6,sy-13,10,4.5);
+    ctx.fillStyle=civ.col1; ctx.fillRect(sx-6,sy-13,10,4.5);
     ctx.fillStyle='#d8a878'; ctx.beginPath(); ctx.arc(sx-1,sy-15,2.2,0,7); ctx.fill();
     const w=16, f=Math.max(0,u.hp/u.max);
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(sx-w/2-1,sy-24,w+2,4);
@@ -2287,17 +2370,17 @@ function drawUnit(u){
     ctx.beginPath(); ctx.moveTo(sx-3.4,sy-4); ctx.lineTo(sx-2.6,sy-11); ctx.lineTo(sx+2.6,sy-11); ctx.lineTo(sx+3.4,sy-4); ctx.closePath(); ctx.fill();
     ctx.fillStyle='#d8a878'; ctx.beginPath(); ctx.arc(sx,sy-13,big?3.2:2.7,0,7); ctx.fill();
     // pokrývka hlavy dle národa
-    if(S.attCiv==='sarac'){
+    if(civKey==='sarac'){
       ctx.fillStyle='#e8e2ce'; ctx.beginPath(); ctx.arc(sx,sy-14,big?3.2:2.7,Math.PI,0); ctx.fill();
       ctx.fillRect(sx-(big?3.2:2.7),sy-14.5,(big?6.4:5.4),1.6);
-    } else if(S.attCiv==='mongol'){
+    } else if(civKey==='mongol'){
       ctx.fillStyle='#5a4326';
       ctx.beginPath(); ctx.moveTo(sx-(big?3.4:2.9),sy-14); ctx.lineTo(sx,sy-19); ctx.lineTo(sx+(big?3.4:2.9),sy-14); ctx.closePath(); ctx.fill();
     } else {
       ctx.fillStyle='#8a8a8a';
       ctx.beginPath(); ctx.arc(sx,sy-14,big?3.2:2.7,Math.PI,0); ctx.fill();
     }
-    if(S.attCiv==='viking'&&u.type==='elite'){
+    if(civKey==='viking'&&u.type==='elite'){
       ctx.strokeStyle='#e8e2ce'; ctx.lineWidth=1.4;
       ctx.beginPath(); ctx.moveTo(sx-3,sy-15); ctx.quadraticCurveTo(sx-6,sy-17,sx-5,sy-19);
       ctx.moveTo(sx+3,sy-15); ctx.quadraticCurveTo(sx+6,sy-17,sx+5,sy-19); ctx.stroke();
@@ -2337,11 +2420,12 @@ function drawAttackInfo(){
   // sloupec boxů při levém okraji, začíná pod plovoucím HUD
   const w=150, lh=12, gap=6;
   let y=64;
-  for(let i=0;i<PATH_KEYS.length&&i<4;i++){
-    const k=PATH_KEYS[i], arr=S.attackPlan[k]||[];
+  const AK=keysOf(S.curAtt), AP=planOf(S.curAtt), AU=UF(S.curAtt);
+  for(let i=0;i<AK.length&&i<4;i++){
+    const k=AK[i], arr=AP[k]||[];
     const lines=[];
     const max=6;
-    arr.slice(0,max).forEach((u,j)=>lines.push((j+1)+'. '+UNITS[u].name));
+    arr.slice(0,max).forEach((u,j)=>lines.push((j+1)+'. '+AU[u].name));
     if(arr.length>max) lines.push('… +'+(arr.length-max)+' dalších');
     if(!arr.length) lines.push('(prázdná)');
     const h=lines.length*lh+23;
@@ -2365,13 +2449,13 @@ function render(){
   ctx.drawImage(terra,0,0,terra.width,terra.height,0,0,VIEW_W,VIEW_H);
   drawWaves();
   drawGulls();
-  for(const k of PATH_KEYS) drawCamp(0.9,PATHS[k][0][1]);
+  for(const k of PATH_KEYS) drawCamp(0.9,PATHS[k][0][1],civOf(PATH_OWNER[k]||1));
   const objs=[];
   MOUNTS.forEach(([x,y])=>objs.push({z:x+y, f:()=>drawMountain(x,y)}));
   TREES.forEach(([x,y])=>objs.push({z:x+y, f:()=>drawTree(x,y)}));
   ANIMALS.forEach(([x,y])=>objs.push({z:x+y, f:()=>drawAnimal(x,y)}));
   DECOR.forEach(([x,y])=>objs.push({z:x+y, f:()=>drawHouse(x,y)}));
-  if(S.phase!=='prepAttack') S.towers.forEach(t=>objs.push({z:t.x+t.y, f:()=>drawTower(t)}));
+  if(S.phase!=='prepAttack'&&S.phase!=='prepAttack2') S.towers.forEach(t=>objs.push({z:t.x+t.y, f:()=>drawTower(t)}));
   objs.push({z:TC.x+TC.y, f:drawTC});
   if(S.battle) S.battle.units.forEach(u=>objs.push({z:u.x+u.y, f:()=>drawUnit(u)}));
   objs.sort((a,b)=>a.z-b.z).forEach(o=>o.f());
@@ -2416,15 +2500,15 @@ function render(){
     }
     for(const t of S.towers) drawRange(t.x,t.y,TOWERS[t.type].range+(hillSet.has(t.x+','+t.y)?0.5:0),'rgba(212,180,90,0.25)');
   }
-  if(S.phase==='prepAttack'){
-    for(const k of PATH_KEYS){
+  if(S.phase==='prepAttack'||S.phase==='prepAttack2'){
+    for(const k of keysOf(S.curAtt)){
       const col=k===S.selPath?'rgba(230,200,90,0.5)':'rgba(230,200,90,0.14)';
       for(const [x,y] of PATHS[k]) drawDiamond(ctx,x,y,raiseAt(x,y),col,null);
     }
   }
   // vrstvy fixní na obrazovce (neposouvají se se zoomem mapy)
   ctx.setTransform(SC,0,0,SC,0,0);
-  if(S.phase==='prepAttack') drawAttackInfo();
+  if(S.phase==='prepAttack'||S.phase==='prepAttack2') drawAttackInfo();
 }
 
 /* ---------- Hlavní smyčka ---------- */
@@ -2432,7 +2516,7 @@ let last=performance.now();
 function loop(now){
   let dt=Math.min(0.05,(now-last)/1000); last=now;
   animT+=dt;
-  if(S.phase==='prepAttack'||S.phase==='prepDefense'){ tickTimer(dt); updateHud(); }
+  if(S.phase==='prepAttack'||S.phase==='prepAttack2'||S.phase==='prepDefense'){ tickTimer(dt); updateHud(); }
   if(S.phase==='battle'){ battleTick(dt*S.speed); updateHud(); }
   render();
   requestAnimationFrame(loop);
