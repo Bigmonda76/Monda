@@ -149,7 +149,7 @@ html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-we
     <p style="font-weight:800;color:#7a4a1a;margin-top:8px">Zvol si postavu, kterou chceš v konírně hrát, nebo hrej jako návštěvník — klikni na postavu a hra začne:</p>
     <div class="chars" id="charList"></div>
     <p class="disc">Už jsi objevil síň slávy, pingpong, zombie apokalypsu a Martina na nakladači?</p>
-    <p style="font-size:11px;color:#9a7a4a;margin-top:12px;text-align:center;letter-spacing:.3px">©MondAI · v1.072</p>
+    <p style="font-size:11px;color:#9a7a4a;margin-top:12px;text-align:center;letter-spacing:.3px">©MondAI · v1.073</p>
   </div>
 </div>
 <div id="pong" class="overlay">
@@ -210,7 +210,7 @@ html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-we
   <div id="hofMsg" style="color:#ffe9b0;font-weight:700;font-size:13px;margin-top:8px;max-width:680px;min-height:36px;text-align:center;padding:0 8px"></div>
   <button class="bigbtn" id="hofClose" style="display:block;margin:10px auto 0">Zpět do konírny</button>
 </div>
-<div id="rotate"><div class="ph">📱</div><div style="margin-top:14px">Otoč telefon na šířku 🙂</div></div>
+<div id="rotate"><div class="ph">📱</div><div style="margin-top:14px">Nejlépe se hraje na šířku 🙂</div></div>
 <script>
 "use strict";
 var cv=document.getElementById('game'), ctx=cv.getContext('2d');
@@ -220,7 +220,8 @@ var cam={x:0,y:0,scale:0.72,us:0.72,min:0.4,max:2.2};
 var viewW=800,viewH=600;
 function resize(){DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));var w=window.innerWidth,h=window.innerHeight;cv.style.width=w+'px';cv.style.height=h+'px';cv.width=Math.floor(w*DPR);cv.height=Math.floor(h*DPR);viewW=w;viewH=h;checkRotate();layoutIntro();}
 window.addEventListener('resize',resize);window.addEventListener('orientationchange',function(){setTimeout(resize,150);});
-function checkRotate(){var r=document.getElementById('rotate');if(!r)return;var portrait=window.innerHeight>window.innerWidth,phone=Math.min(window.innerWidth,window.innerHeight)<820;r.style.display=(portrait&&phone)?'flex':'none';}
+var _rotWasP=false,_rotT=0;
+function checkRotate(){var r=document.getElementById('rotate');if(!r)return;var p=(window.innerHeight>window.innerWidth)&&Math.min(window.innerWidth,window.innerHeight)<820;if(p&&!_rotWasP){r.style.display='flex';clearTimeout(_rotT);_rotT=setTimeout(function(){r.style.display='none';},1400);}else if(!p){clearTimeout(_rotT);r.style.display='none';}_rotWasP=p;}
 function clamp(v,a,b){return v<a?a:(v>b?b:v);}
 function shade(hex,f){var n=parseInt(hex.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return 'rgb('+clamp(Math.round(r*f),0,255)+','+clamp(Math.round(g*f),0,255)+','+clamp(Math.round(b*f),0,255)+')';}
 
